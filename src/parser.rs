@@ -80,7 +80,7 @@ impl Parser {
             Ok(())
         } else {
             Err(ParseError::new(
-                format!("Expected {:?}, got {:?}", expected, tok),
+                format!("'{:?}' 예상, '{:?}' 발견", expected, tok),
                 line,
             ))
         }
@@ -155,7 +155,7 @@ impl Parser {
             Token::Identifier(n) => n,
             tok => {
                 return Err(ParseError::new(
-                    format!("Expected function name, got {:?}", tok),
+                    format!("함수 이름 예상, '{:?}' 발견", tok),
                     line,
                 ))
             }
@@ -169,7 +169,7 @@ impl Parser {
                 Token::Identifier(n) => n,
                 tok => {
                     return Err(ParseError::new(
-                        format!("Expected parameter name, got {:?}", tok),
+                        format!("매개변수 이름 예상, '{:?}' 발견", tok),
                         line,
                     ))
                 }
@@ -342,7 +342,7 @@ impl Parser {
                         value: Box::new(value),
                     });
                 }
-                Err(ParseError::new("Invalid assignment target", line))
+                Err(ParseError::new("할당 대상이 올바르지 않습니다", line))
             }
             Token::PlusEq | Token::MinusEq | Token::StarEq | Token::SlashEq => {
                 let op_tok = self.advance().clone();
@@ -365,7 +365,7 @@ impl Parser {
                         value: Box::new(compound),
                     });
                 }
-                Err(ParseError::new("Invalid compound assignment target", line))
+                Err(ParseError::new("복합 할당 대상이 올바르지 않습니다", line))
             }
             _ => Ok(left),
         }
@@ -571,7 +571,7 @@ impl Parser {
                 Ok(expr)
             }
             tok => Err(ParseError::new(
-                format!("Unexpected token in expression: {:?}", tok),
+                format!("표현식에서 예상치 못한 토큰: {:?}", tok),
                 line,
             )),
         }
@@ -588,7 +588,7 @@ impl Parser {
             Token::불타입 => Ok(Type::불),
             Token::없음타입 => Ok(Type::없음),
             tok => Err(ParseError::new(
-                format!("Expected type, got {:?}", tok),
+                format!("타입 예상 (정수/실수/문자열/불/없음), '{:?}' 발견", tok),
                 line,
             )),
         }
