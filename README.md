@@ -3,8 +3,7 @@
 > A general-purpose compiled language with Korean keywords — written in Rust
 
 <p align="center">
-  <strong>함수 · 만약 · 반복 · 변수 · 출력</strong><br>
-  <em>Write code in one of the world's most beautifully designed writing systems.</em>
+  <img src="assets/demo.png" alt="Han code example — Todo list with structs" width="600">
 </p>
 
 ---

@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body {
+  margin: 0;
+  padding: 40px;
+  background: #1a1b26;
+  display: flex;
+  justify-content: center;
+}
+.terminal {
+  background: #282a36;
+  border-radius: 12px;
+  width: 680px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  overflow: hidden;
+  font-family: 'SF Mono', 'Apple SD Gothic Neo', 'Menlo', monospace;
+}
+.titlebar {
+  background: #343746;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+.dot.red { background: #ff5f57; }
+.dot.yellow { background: #febc2e; }
+.dot.green { background: #28c840; }
+.titlebar-text {
+  color: #6272a4;
+  font-size: 13px;
+  margin-left: 8px;
+}
+.content {
+  padding: 20px 24px 24px;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #f8f8f2;
+}
+.prompt { color: #50fa7b; }
+.comment { color: #6272a4; }
+.keyword { color: #ff79c6; }
+.string { color: #f1fa8c; }
+.type { color: #8be9fd; }
+.func { color: #50fa7b; }
+.num { color: #bd93f9; }
+.output {
+  color: #f8f8f2;
+  border-left: 3px solid #44475a;
+  padding-left: 12px;
+  margin: 8px 0;
+}
+.check { color: #50fa7b; }
+.uncheck { color: #6272a4; }
+.separator {
+  border: none;
+  border-top: 1px solid #44475a;
+  margin: 12px 0;
+}
+</style>
+</head>
+<body>
+<div class="terminal">
+  <div class="titlebar">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+    <span class="titlebar-text">hgl — examples/할일목록.hgl</span>
+  </div>
+  <div class="content">
+    <div><span class="keyword">구조</span> 할일 {</div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;제목: <span class="type">문자열</span>,</div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;완료: <span class="type">불</span></div>
+    <div>}</div>
+    <br>
+    <div><span class="keyword">변수</span> 목록 = []</div>
+    <br>
+    <div><span class="keyword">함수</span> <span class="func">추가하기</span>(목록: [할일], 제목: <span class="type">문자열</span>) {</div>
+    <div>&nbsp;&nbsp;&nbsp;&nbsp;목록.<span class="func">추가</span>(할일 { 제목: 제목, 완료: <span class="num">거짓</span> })</div>
+    <div>}</div>
+    <br>
+    <div><span class="func">추가하기</span>(목록, <span class="string">"한글 프로그래밍 언어 만들기"</span>)</div>
+    <div><span class="func">추가하기</span>(목록, <span class="string">"README 작성하기"</span>)</div>
+    <div><span class="func">추가하기</span>(목록, <span class="string">"HN에 올리기"</span>)</div>
+    <br>
+    <div><span class="func">완료처리</span>(목록, <span class="num">0</span>)</div>
+    <div><span class="func">완료처리</span>(목록, <span class="num">1</span>)</div>
+    <hr class="separator">
+    <div><span class="prompt">$</span> hgl interpret examples/할일목록.hgl</div>
+    <div class="output">
+      <div>=== 할일 목록 ===</div>
+      <div><span class="check">[✓]</span> 1. 한글 프로그래밍 언어 만들기</div>
+      <div><span class="check">[✓]</span> 2. README 작성하기</div>
+      <div><span class="uncheck">[ ]</span> 3. HN에 올리기</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
