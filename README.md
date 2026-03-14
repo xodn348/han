@@ -65,6 +65,142 @@ hgl repl
 
 ---
 
+## Practical Examples
+
+### Word Counter
+
+```
+변수 텍스트 = "hello world hello han world hello"
+변수 단어들 = 텍스트.분리(" ")
+변수 단어목록 = []
+변수 개수목록 = []
+
+반복 변수 i = 0; i < 단어들.길이(); i += 1 {
+    변수 찾음 = 거짓
+    반복 변수 j = 0; j < 단어목록.길이(); j += 1 {
+        만약 단어목록[j] == 단어들[i] {
+            개수목록[j] = 개수목록[j] + 1
+            찾음 = 참
+        }
+    }
+    만약 찾음 == 거짓 {
+        단어목록.추가(단어들[i])
+        개수목록.추가(1)
+    }
+}
+
+반복 변수 i = 0; i < 단어목록.길이(); i += 1 {
+    출력(형식("{0}: {1}", 단어목록[i], 개수목록[i]))
+}
+```
+
+```
+hello: 3
+world: 2
+han: 1
+```
+
+### String Calculator
+
+```
+함수 계산(식: 문자열) -> 정수 {
+    변수 부분 = 식.분리(" ")
+    변수 왼쪽 = 정수변환(부분[0])
+    변수 연산자 = 부분[1]
+    변수 오른쪽 = 정수변환(부분[2])
+
+    맞춰 연산자 {
+        "+" => { 반환 왼쪽 + 오른쪽 }
+        "-" => { 반환 왼쪽 - 오른쪽 }
+        "*" => { 반환 왼쪽 * 오른쪽 }
+        "/" => {
+            만약 오른쪽 == 0 {
+                출력("오류: 0으로 나눌 수 없습니다")
+                반환 0
+            }
+            반환 왼쪽 / 오른쪽
+        }
+        _ => {
+            출력(형식("알 수 없는 연산자: {0}", 연산자))
+            반환 0
+        }
+    }
+}
+
+출력(계산("10 + 20"))     // 30
+출력(계산("6 * 7"))       // 42
+```
+
+### Todo List with Structs
+
+```
+구조 할일 {
+    제목: 문자열,
+    완료: 불
+}
+
+변수 목록 = []
+
+함수 추가하기(목록: [할일], 제목: 문자열) {
+    목록.추가(할일 { 제목: 제목, 완료: 거짓 })
+}
+
+함수 완료처리(목록: [할일], index: 정수) {
+    목록[index].완료 = 참
+}
+
+함수 출력목록(목록: [할일]) {
+    반복 변수 i = 0; i < 목록.길이(); i += 1 {
+        변수 상태 = "[ ]"
+        만약 목록[i].완료 {
+            상태 = "[✓]"
+        }
+        출력(형식("{0} {1}. {2}", 상태, i + 1, 목록[i].제목))
+    }
+}
+
+추가하기(목록, "한글 프로그래밍 언어 만들기")
+추가하기(목록, "README 작성하기")
+추가하기(목록, "HN에 올리기")
+
+완료처리(목록, 0)
+완료처리(목록, 1)
+
+출력("=== 할일 목록 ===")
+출력목록(목록)
+```
+
+```
+=== 할일 목록 ===
+[✓] 1. 한글 프로그래밍 언어 만들기
+[✓] 2. README 작성하기
+[ ] 3. HN에 올리기
+```
+
+### File Line Counter
+
+```
+함수 줄수세기(경로: 문자열) -> 정수 {
+    시도 {
+        변수 내용 = 파일읽기(경로)
+        변수 줄들 = 내용.분리("\n")
+        반환 줄들.길이()
+    } 실패(오류) {
+        출력(형식("오류: {0}", 오류))
+        반환 0
+    }
+}
+
+파일쓰기("/tmp/test.txt", "첫번째 줄\n두번째 줄\n세번째 줄\n")
+출력(형식("줄 수: {0}", 줄수세기("/tmp/test.txt")))
+```
+
+```
+줄 수: 4
+```
+
+---
+
 ## Installation
 
 ### Prerequisites
@@ -193,24 +329,6 @@ hgl lsp                     Start LSP server (hover + completion)
 Hangul (한글) is not just a writing system — it is a feat of deliberate linguistic design. Created in 1443 by King Sejong the Great, each character encodes phonetic information in its geometric shape. Consonants mirror the tongue and mouth positions used to pronounce them. Vowels are composed from three cosmic symbols: heaven (·), earth (ㅡ), and human (ㅣ).
 
 Han brings this elegance into programming. When you write `함수 피보나치(n: 정수) -> 정수`, you are not just defining a function — you are writing in a script that was purpose-built for clarity and beauty.
-
-</details>
-
-<details>
-<summary>Token Efficiency</summary>
-
-Korean keywords are remarkably dense. A single Hangul syllable block packs an initial consonant, a vowel, and an optional final consonant into one character. This means Han keywords carry more semantic weight per token than their English equivalents:
-
-| Han | English | Tokens (approx.) |
-|-----|---------|-------------------|
-| `함수` | `function` | 1 vs 1-2 |
-| `만약` | `if` | 1 vs 1 |
-| `변수` | `let mut` / `var` | 1 vs 1-2 |
-| `반환` | `return` | 1 vs 1 |
-| `동안` | `while` | 1 vs 1 |
-| `아니면` | `else` | 1 vs 1 |
-
-In AI-assisted development workflows where token budgets matter — code generation, LLM context windows, prompt engineering — fewer tokens per keyword means more room for actual logic.
 
 </details>
 
