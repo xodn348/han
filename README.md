@@ -17,45 +17,57 @@ Han was born from the idea that programming doesn't have to look the same in eve
 
 ---
 
-## Why Han?
-
-### The Beauty of Hangul
-
-Hangul (한글) is not just a writing system — it is a feat of deliberate linguistic design. Created in 1443 by King Sejong the Great, each character encodes phonetic information in its geometric shape. Consonants mirror the tongue and mouth positions used to pronounce them. Vowels are composed from three cosmic symbols: heaven (·), earth (ㅡ), and human (ㅣ).
-
-Han brings this elegance into programming. When you write `함수 피보나치(n: 정수) -> 정수`, you are not just defining a function — you are writing in a script that was purpose-built for clarity and beauty.
-
-### Token Efficiency
-
-Korean keywords are remarkably dense. A single Hangul syllable block packs an initial consonant, a vowel, and an optional final consonant into one character. This means Han keywords carry more semantic weight per token than their English equivalents:
-
-| Han | English | Tokens (approx.) |
-|-----|---------|-------------------|
-| `함수` | `function` | 1 vs 1-2 |
-| `만약` | `if` | 1 vs 1 |
-| `변수` | `let mut` / `var` | 1 vs 1-2 |
-| `반환` | `return` | 1 vs 1 |
-| `동안` | `while` | 1 vs 1 |
-| `아니면` | `else` | 1 vs 1 |
-
-In AI-assisted development workflows where token budgets matter — code generation, LLM context windows, prompt engineering — fewer tokens per keyword means more room for actual logic.
-
-### Riding the Korean Wave
-
-The global interest in Korean culture has never been higher. From K-pop and Korean cinema to Korean cuisine and language learning, millions worldwide are engaging with Korean culture. Over 16 million people are actively studying Korean as a foreign language.
-
-Han offers these learners something unexpected: a way to practice reading and writing Hangul through programming. It bridges the gap between cultural interest and technical skill, making Korean literacy functional in a domain where it has never existed before.
-
----
-
 ## Features
 
 - **Korean keywords** — `함수`, `만약`, `반복`, `변수` — write logic in Hangul
 - **Hangul identifiers** — name your variables and functions in Korean
 - **Compiled language** — generates LLVM IR → clang → native binary
 - **Interpreter mode** — run instantly without clang
+- **REPL** — interactive mode with `hgl repl`
 - **Static typing** — 5 primitive types: `정수` (int), `실수` (float), `문자열` (string), `불` (bool), `없음` (void)
-- **Dual execution** — choose between compilation for performance or interpretation for convenience
+- **Built-in math** — `제곱근`, `절댓값`, `거듭제곱`, `정수변환`, `실수변환`, `길이`
+
+---
+
+## Quick Start
+
+### Hello World
+
+Create `hello.hgl`:
+
+```
+함수 main() {
+    출력("안녕하세요, 세계!")
+}
+
+main()
+```
+
+Run it:
+
+```bash
+hgl interpret hello.hgl
+# Output: 안녕하세요, 세계!
+```
+
+### Fibonacci
+
+```
+함수 피보나치(n: 정수) -> 정수 {
+    만약 n <= 1 {
+        반환 n
+    }
+    반환 피보나치(n - 1) + 피보나치(n - 2)
+}
+
+함수 main() {
+    출력(피보나치(10))
+}
+
+main()
+```
+
+Output: `55`
 
 ---
 
@@ -82,54 +94,59 @@ cp ./target/release/hgl /usr/local/bin/hgl
 
 ---
 
-## Quick Start
-
-### Hello World
-
-Create `hello.hgl`:
-
-```
-함수 main() {
-    출력("안녕하세요, 세계!")
-}
-
-main()
-```
-
-Run it:
-
-```bash
-hgl interpret hello.hgl
-# Output: 안녕하세요, 세계!
-```
-
----
-
 ## CLI Usage
 
 ```
 hgl interpret <file.hgl>    Run with interpreter (no clang needed)
 hgl build <file.hgl>        Compile to native binary (requires clang)
 hgl run <file.hgl>          Compile and run immediately
-```
-
-### Examples
-
-```bash
-# Interpret (fastest way to start)
-hgl interpret examples/피보나치.hgl
-
-# Compile to binary
-hgl build examples/피보나치.hgl
-./피보나치
-
-# Compile and run
-hgl run examples/팩토리얼.hgl
+hgl repl                    Interactive REPL
 ```
 
 ---
 
-## Language Guide
+## Why Han?
+
+<details>
+<summary>The Beauty of Hangul</summary>
+
+Hangul (한글) is not just a writing system — it is a feat of deliberate linguistic design. Created in 1443 by King Sejong the Great, each character encodes phonetic information in its geometric shape. Consonants mirror the tongue and mouth positions used to pronounce them. Vowels are composed from three cosmic symbols: heaven (·), earth (ㅡ), and human (ㅣ).
+
+Han brings this elegance into programming. When you write `함수 피보나치(n: 정수) -> 정수`, you are not just defining a function — you are writing in a script that was purpose-built for clarity and beauty.
+
+</details>
+
+<details>
+<summary>Token Efficiency</summary>
+
+Korean keywords are remarkably dense. A single Hangul syllable block packs an initial consonant, a vowel, and an optional final consonant into one character. This means Han keywords carry more semantic weight per token than their English equivalents:
+
+| Han | English | Tokens (approx.) |
+|-----|---------|-------------------|
+| `함수` | `function` | 1 vs 1-2 |
+| `만약` | `if` | 1 vs 1 |
+| `변수` | `let mut` / `var` | 1 vs 1-2 |
+| `반환` | `return` | 1 vs 1 |
+| `동안` | `while` | 1 vs 1 |
+| `아니면` | `else` | 1 vs 1 |
+
+In AI-assisted development workflows where token budgets matter — code generation, LLM context windows, prompt engineering — fewer tokens per keyword means more room for actual logic.
+
+</details>
+
+<details>
+<summary>Riding the Korean Wave</summary>
+
+The global interest in Korean culture has never been higher. From K-pop and Korean cinema to Korean cuisine and language learning, millions worldwide are engaging with Korean culture. Over 16 million people are actively studying Korean as a foreign language.
+
+Han offers these learners something unexpected: a way to practice reading and writing Hangul through programming. It bridges the gap between cultural interest and technical skill, making Korean literacy functional in a domain where it has never existed before.
+
+</details>
+
+---
+
+<details>
+<summary><strong>Language Guide</strong></summary>
 
 ### Variables and Constants
 
@@ -164,9 +181,11 @@ With explicit type annotations:
 
 ```
 만약 점수 >= 90 {
-    출력("A 학점")
+    출력("A")
+} 아니면 만약 점수 >= 80 {
+    출력("B")
 } 아니면 {
-    출력("B 학점 이하")
+    출력("C")
 }
 ```
 
@@ -204,28 +223,10 @@ With explicit type annotations:
 }
 ```
 
----
+</details>
 
-## Example Programs
-
-### Fibonacci Sequence
-
-```
-함수 피보나치(n: 정수) -> 정수 {
-    만약 n <= 1 {
-        반환 n
-    }
-    반환 피보나치(n - 1) + 피보나치(n - 2)
-}
-
-함수 main() {
-    출력(피보나치(10))
-}
-
-main()
-```
-
-Output: `55`
+<details>
+<summary><strong>Example Programs</strong></summary>
 
 ### Factorial
 
@@ -282,9 +283,10 @@ Output: `5050`
 main()
 ```
 
----
+</details>
 
-## Keyword Reference
+<details>
+<summary><strong>Keyword Reference</strong></summary>
 
 | Keyword | Meaning | English Equivalent |
 |---------|---------|-------------------|
@@ -303,7 +305,10 @@ main()
 | `출력` | print to console | `print` |
 | `입력` | read from console | `input` |
 
-## Type System
+</details>
+
+<details>
+<summary><strong>Type System & Operators</strong></summary>
 
 | Type | Description | LLVM Type | Examples |
 |------|-------------|-----------|----------|
@@ -313,20 +318,18 @@ main()
 | `불` | boolean | `i1` | `참`, `거짓` |
 | `없음` | void / no value | `void` | (function return type) |
 
-## Operators
-
 | Operator | Description |
 |----------|-------------|
 | `+`, `-`, `*`, `/`, `%` | Arithmetic |
 | `==`, `!=` | Equality |
 | `<`, `>`, `<=`, `>=` | Comparison |
 | `&&`, `\|\|`, `!` | Logical |
-| `=` | Assignment |
-| `+=`, `-=`, `*=`, `/=` | Compound assignment |
+| `=`, `+=`, `-=`, `*=`, `/=` | Assignment |
 
----
+</details>
 
-## Design and Architecture
+<details>
+<summary><strong>Design and Architecture</strong></summary>
 
 ### How Han Works
 
@@ -369,7 +372,6 @@ han/
 ├── examples/            Example .hgl programs
 ├── spec/
 │   └── SPEC.md          Formal language specification (EBNF)
-├── docs/                Documentation
 └── tests/               Integration tests
 ```
 
@@ -384,6 +386,8 @@ The interpreter enables instant execution without any toolchain dependencies bey
 **Why Rust?**
 Rust's enum types map naturally to AST nodes and token variants. Pattern matching makes parser and interpreter logic clear and exhaustive. Memory safety without garbage collection suits a language toolchain.
 
+</details>
+
 ---
 
 ## Running Tests
@@ -393,24 +397,6 @@ cargo test
 ```
 
 46 tests (41 unit + 5 integration) covering the lexer, parser, AST, interpreter, and code generator.
-
----
-
-## Roadmap
-
-- [x] Symbol table and type tracking in codegen
-- [x] `아니면 만약` (else-if) chaining
-- [x] REPL mode (`hgl repl`)
-- [x] Standard library expansion (math functions, type conversion)
-- [x] Error messages with line/column info
-- [x] String concatenation in codegen
-- [x] Integration test harness
-- [ ] Array/list types (`[정수]`, `[문자열]`)
-- [ ] Structs (`구조`)
-- [ ] Module/import system
-- [ ] Pattern matching (`맞춰`)
-- [ ] Error handling (`시도` / `실패`)
-- [ ] LSP server for editor support
 
 ---
 
