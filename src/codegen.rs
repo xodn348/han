@@ -234,7 +234,8 @@ impl CodeGen {
             | Expr::MethodCall { .. }
             | Expr::FieldAccess { .. }
             | Expr::FieldAssign { .. }
-            | Expr::StructLiteral { .. } => {
+            | Expr::StructLiteral { .. }
+            | Expr::Lambda { .. } => {
                 let t = self.fresh_temp();
                 self.emit(&format!("  {} = add nsw i64 0, 0", t));
                 t
@@ -487,6 +488,15 @@ impl CodeGen {
                 }
             }
             StmtKind::Import(_) => {}
+            StmtKind::Match { expr, arms } => {
+                self.gen_expr(expr);
+                for arm in arms {
+                    for s in &arm.body {
+                        self.gen_stmt(s);
+                    }
+                }
+            }
+            StmtKind::ImplBlock { .. } => {}
         }
     }
 

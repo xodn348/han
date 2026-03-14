@@ -22,6 +22,9 @@ pub enum Token {
     시도,
     실패,
     가져오기,
+    맞춰,
+    화살표이중, // =>
+    구현,
     // 타입 키워드
     정수타입,
     실수타입,
@@ -112,6 +115,8 @@ pub fn get_keyword_map() -> HashMap<String, Token> {
     map.insert("시도".to_string(), Token::시도);
     map.insert("실패".to_string(), Token::실패);
     map.insert("가져오기".to_string(), Token::가져오기);
+    map.insert("맞춰".to_string(), Token::맞춰);
+    map.insert("구현".to_string(), Token::구현);
     // 타입 키워드
     map.insert("정수".to_string(), Token::정수타입);
     map.insert("실수".to_string(), Token::실수타입);
@@ -329,6 +334,9 @@ impl Lexer {
                 if self.peek() == Some('=') {
                     self.advance();
                     Token::EqEq
+                } else if self.peek() == Some('>') {
+                    self.advance();
+                    Token::화살표이중
                 } else {
                     Token::Eq
                 }

@@ -1,4 +1,4 @@
-use crate::ast::{BinaryOpKind, Expr, Program, Stmt, StmtKind, Type, UnaryOpKind};
+use crate::ast::{BinaryOpKind, Expr, Pattern, Program, Stmt, StmtKind, Type, UnaryOpKind};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{self, BufRead};
@@ -14,6 +14,11 @@ pub enum Value {
     Function {
         params: Vec<(String, Type)>,
         body: Vec<Stmt>,
+    },
+    Closure {
+        params: Vec<(String, Option<Type>)>,
+        body: Vec<Stmt>,
+        captured: Vec<(String, Value)>,
     },
     Array(Rc<RefCell<Vec<Value>>>),
     Struct {
@@ -31,6 +36,7 @@ impl std::fmt::Display for Value {
             Value::Bool(b) => write!(f, "{}", if *b { "참" } else { "거짓" }),
             Value::Void => write!(f, "없음"),
             Value::Function { .. } => write!(f, "<함수>"),
+            Value::Closure { .. } => write!(f, "<람다>"),
             Value::Array(arr) => {
                 let arr = arr.borrow();
                 let items: Vec<String> = arr.iter().map(|v| v.to_string()).collect();
@@ -122,6 +128,22 @@ impl Environment {
             }
         }
         funcs
+    }
+
+    pub fn snapshot(&self) -> Vec<(String, Value)> {
+        let mut all: Vec<(String, Value)> = self
+            .store
+            .iter()
+            .map(|(k, v)| (k.clone(), v.clone()))
+            .collect();
+        if let Some(outer) = &self.outer {
+            for (k, v) in outer.snapshot() {
+                if !all.iter().any(|(name, _)| name == &k) {
+                    all.push((k, v));
+                }
+            }
+        }
+        all
     }
 }
 
@@ -235,6 +257,38 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                     }
 
                     match eval_block(&body, &mut func_env)? {
+                        Some(Signal::Return(v)) => Ok(v),
+                        _ => Ok(Value::Void),
+                    }
+                }
+                Value::Closure {
+                    params,
+                    body,
+                    captured,
+                } => {
+                    if args.len() != params.len() {
+                        return Err(RuntimeError::new(
+                            format!(
+                                "람다 '{}': 인자 수 불일치 (기대 {}, 실제 {})",
+                                name,
+                                params.len(),
+                                args.len()
+                            ),
+                            line,
+                        ));
+                    }
+                    let mut arg_vals = Vec::new();
+                    for arg in args {
+                        arg_vals.push(eval_expr(arg, env, line)?);
+                    }
+                    let mut closure_env = Environment::new();
+                    for (k, v) in &captured {
+                        closure_env.set(k.clone(), v.clone());
+                    }
+                    for ((param_name, _), val) in params.iter().zip(arg_vals) {
+                        closure_env.set(param_name.clone(), val);
+                    }
+                    match eval_block(&body, &mut closure_env)? {
                         Some(Signal::Return(v)) => Ok(v),
                         _ => Ok(Value::Void),
                     }
@@ -356,6 +410,15 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
             Ok(Value::Struct {
                 name: name.clone(),
                 fields: Rc::new(RefCell::new(map)),
+            })
+        }
+
+        Expr::Lambda { params, body } => {
+            let captured = env.snapshot();
+            Ok(Value::Closure {
+                params: params.clone(),
+                body: body.clone(),
+                captured,
             })
         }
     }
@@ -490,6 +553,47 @@ fn eval_method(
                 line,
             )),
         },
+        Value::Struct {
+            name: struct_name,
+            fields,
+        } => {
+            let method_key = format!("{}::{}", struct_name, method);
+            if let Some(func_val) = env.get(&method_key) {
+                match func_val {
+                    Value::Function { params, body } => {
+                        let mut method_env = Environment::new();
+                        for (fname, fval) in env.collect_functions() {
+                            method_env.set(fname, fval);
+                        }
+                        method_env.set(
+                            "자신".to_string(),
+                            Value::Struct {
+                                name: struct_name.clone(),
+                                fields: fields.clone(),
+                            },
+                        );
+                        let non_self_params: Vec<_> =
+                            params.iter().filter(|(n, _)| n != "자신").collect();
+                        for ((pname, _), val) in non_self_params.iter().zip(arg_vals) {
+                            method_env.set(pname.clone(), val);
+                        }
+                        match eval_block(&body, &mut method_env)? {
+                            Some(Signal::Return(v)) => Ok(v),
+                            _ => Ok(Value::Void),
+                        }
+                    }
+                    _ => Err(RuntimeError::new(
+                        format!("'{}' 는 함수가 아닙니다", method_key),
+                        line,
+                    )),
+                }
+            } else {
+                Err(RuntimeError::new(
+                    format!("구조체 '{}' 에 메서드 '{}' 없음", struct_name, method),
+                    line,
+                ))
+            }
+        }
         _ => Err(RuntimeError::new(
             format!("메서드 '{}' 호출 불가 타입", method),
             line,
@@ -565,6 +669,34 @@ fn eval_builtin_io(
             }
             eprintln!("{}", parts.join(" "));
             Ok(Some(Value::Void))
+        }
+        "형식" => {
+            if args.is_empty() {
+                return Err(RuntimeError::new("형식: 형식 문자열 인자 필요", line));
+            }
+            let template = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("형식: 첫 인자는 문자열 필요", line)),
+            };
+            let mut positional = Vec::new();
+            for arg in &args[1..] {
+                positional.push(eval_expr(arg, env, line)?.to_string());
+            }
+            let result = if positional.is_empty() {
+                let snapshot = env.snapshot();
+                let mut out = template.clone();
+                for (k, v) in &snapshot {
+                    out = out.replace(&format!("{{{}}}", k), &v.to_string());
+                }
+                out
+            } else {
+                let mut out = template.clone();
+                for (i, val) in positional.iter().enumerate() {
+                    out = out.replace(&format!("{{{}}}", i), val);
+                }
+                out
+            };
+            Ok(Some(Value::Str(result)))
         }
         _ => Ok(None),
     }
@@ -880,6 +1012,63 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
             eval_block(&program.stmts, env)?;
             Ok(None)
         }
+
+        StmtKind::Match { expr, arms } => {
+            let val = eval_expr(expr, env, line)?;
+            for arm in arms {
+                if pattern_matches(&arm.pattern, &val, env) {
+                    return eval_block(&arm.body, env);
+                }
+            }
+            Ok(None)
+        }
+
+        StmtKind::ImplBlock {
+            struct_name,
+            methods,
+        } => {
+            for method_stmt in methods {
+                if let StmtKind::FuncDef {
+                    name,
+                    params,
+                    return_type: _,
+                    body,
+                } = &method_stmt.kind
+                {
+                    let key = format!("{}::{}", struct_name, name);
+                    let func = Value::Function {
+                        params: params.clone(),
+                        body: body.clone(),
+                    };
+                    env.set(key, func);
+                }
+            }
+            Ok(None)
+        }
+    }
+}
+
+fn pattern_matches(pattern: &Pattern, value: &Value, env: &mut Environment) -> bool {
+    match (pattern, value) {
+        (Pattern::Wildcard, _) => true,
+        (Pattern::IntLiteral(n), Value::Int(v)) => n == v,
+        (Pattern::FloatLiteral(f), Value::Float(v)) => (f - v).abs() < f64::EPSILON,
+        (Pattern::StringLiteral(s), Value::Str(v)) => s == v,
+        (Pattern::BoolLiteral(b), Value::Bool(v)) => b == v,
+        (Pattern::Identifier(name), val) => {
+            env.set(name.clone(), val.clone());
+            true
+        }
+        (Pattern::ArrayPattern(pats), Value::Array(arr)) => {
+            let arr = arr.borrow();
+            if pats.len() != arr.len() {
+                return false;
+            }
+            pats.iter()
+                .zip(arr.iter())
+                .all(|(p, v)| pattern_matches(p, v, env))
+        }
+        _ => false,
     }
 }
 

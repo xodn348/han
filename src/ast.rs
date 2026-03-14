@@ -80,6 +80,27 @@ pub enum Expr {
         field: String,
         value: Box<Expr>,
     },
+    Lambda {
+        params: Vec<(String, Option<Type>)>,
+        body: Vec<Stmt>,
+    },
+}
+
+#[derive(Debug, Clone)]
+pub struct MatchArm {
+    pub pattern: Pattern,
+    pub body: Vec<Stmt>,
+}
+
+#[derive(Debug, Clone)]
+pub enum Pattern {
+    IntLiteral(i64),
+    FloatLiteral(f64),
+    StringLiteral(String),
+    BoolLiteral(bool),
+    Wildcard,
+    Identifier(String),
+    ArrayPattern(Vec<Pattern>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -172,6 +193,14 @@ pub enum StmtKind {
         catch_block: Vec<Stmt>,
     },
     Import(String),
+    Match {
+        expr: Expr,
+        arms: Vec<MatchArm>,
+    },
+    ImplBlock {
+        struct_name: String,
+        methods: Vec<Stmt>,
+    },
 }
 
 /// 프로그램 최상위 노드

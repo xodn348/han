@@ -2,6 +2,7 @@ mod ast;
 mod codegen;
 mod interpreter;
 mod lexer;
+mod lsp;
 mod parser;
 
 use clap::{Parser, Subcommand};
@@ -23,6 +24,7 @@ enum Commands {
     Run { file: String },
     Interpret { file: String },
     Repl,
+    Lsp,
 }
 
 fn run_pipeline(source: &str) -> ast::Program {
@@ -192,6 +194,10 @@ fn main() {
 
         Commands::Repl => {
             run_repl();
+        }
+
+        Commands::Lsp => {
+            lsp::run_lsp();
         }
     }
 }

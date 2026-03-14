@@ -23,11 +23,16 @@ impl ParseError {
 pub struct Parser {
     tokens: Vec<TokenWithPos>,
     pos: usize,
+    no_struct_literal: bool,
 }
 
 impl Parser {
     pub fn new(tokens: Vec<TokenWithPos>) -> Self {
-        Self { tokens, pos: 0 }
+        Self {
+            tokens,
+            pos: 0,
+            no_struct_literal: false,
+        }
     }
 
     // ── Cursor helpers ────────────────────────────────────────────────────────
@@ -150,6 +155,8 @@ impl Parser {
                     )),
                 }
             }
+            Token::맞춰 => self.parse_match(),
+            Token::구현 => self.parse_impl_block(),
             _ => {
                 let expr = self.parse_expr()?;
                 Ok(Stmt::new(StmtKind::ExprStmt(expr), span))
@@ -172,6 +179,15 @@ impl Parser {
                 ))
             }
         };
+
+        // generic type params <T, U, ...> — consumed and ignored at runtime
+        if matches!(self.peek(), Token::Lt) {
+            self.advance();
+            while !matches!(self.peek(), Token::Gt | Token::Eof) {
+                self.advance();
+            }
+            self.expect(&Token::Gt)?;
+        }
 
         self.expect(&Token::LParen)?;
 
@@ -568,7 +584,7 @@ impl Parser {
                     }
                     self.expect(&Token::RParen)?;
                     Expr::Call { name, args }
-                } else if matches!(self.peek(), Token::LBrace) {
+                } else if matches!(self.peek(), Token::LBrace) && !self.no_struct_literal {
                     self.advance();
                     let mut fields = Vec::new();
                     while !matches!(self.peek(), Token::RBrace | Token::Eof) {
@@ -631,6 +647,35 @@ impl Parser {
                 let e = self.parse_expr()?;
                 self.expect(&Token::RParen)?;
                 e
+            }
+            Token::함수 => {
+                self.advance();
+                self.expect(&Token::LParen)?;
+                let mut params = Vec::new();
+                while !matches!(self.peek(), Token::RParen | Token::Eof) {
+                    let pname = match self.advance().clone() {
+                        Token::Identifier(n) => n,
+                        tok => {
+                            return Err(ParseError::new(
+                                format!("람다 매개변수 이름 예상, '{:?}' 발견", tok),
+                                line,
+                            ))
+                        }
+                    };
+                    let pty = if matches!(self.peek(), Token::Colon) {
+                        self.advance();
+                        Some(self.parse_type()?)
+                    } else {
+                        None
+                    };
+                    params.push((pname, pty));
+                    if matches!(self.peek(), Token::Comma) {
+                        self.advance();
+                    }
+                }
+                self.expect(&Token::RParen)?;
+                let body = self.parse_block()?;
+                Expr::Lambda { params, body }
             }
             tok => {
                 return Err(ParseError::new(
@@ -785,6 +830,113 @@ impl Parser {
                 line,
             )),
         }
+    }
+
+    fn parse_match(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.span_here();
+        self.advance();
+        self.no_struct_literal = true;
+        let expr = self.parse_or()?;
+        self.no_struct_literal = false;
+        self.expect(&Token::LBrace)?;
+        let mut arms = Vec::new();
+        while !matches!(self.peek(), Token::RBrace | Token::Eof) {
+            let pattern = self.parse_pattern()?;
+            self.expect(&Token::화살표이중)?;
+            let body = if matches!(self.peek(), Token::LBrace) {
+                self.parse_block()?
+            } else {
+                let s = self.parse_stmt()?;
+                if matches!(self.peek(), Token::Comma) {
+                    self.advance();
+                }
+                vec![s]
+            };
+            arms.push(MatchArm { pattern, body });
+        }
+        self.expect(&Token::RBrace)?;
+        Ok(Stmt::new(StmtKind::Match { expr, arms }, span))
+    }
+
+    fn parse_pattern(&mut self) -> Result<Pattern, ParseError> {
+        let (line, _) = self.peek_pos();
+        match self.peek().clone() {
+            Token::IntLiteral(n) => {
+                self.advance();
+                Ok(Pattern::IntLiteral(n))
+            }
+            Token::FloatLiteral(f) => {
+                self.advance();
+                Ok(Pattern::FloatLiteral(f))
+            }
+            Token::StringLiteral(s) => {
+                self.advance();
+                Ok(Pattern::StringLiteral(s))
+            }
+            Token::참 => {
+                self.advance();
+                Ok(Pattern::BoolLiteral(true))
+            }
+            Token::거짓 => {
+                self.advance();
+                Ok(Pattern::BoolLiteral(false))
+            }
+            Token::Identifier(name) if name == "_" => {
+                self.advance();
+                Ok(Pattern::Wildcard)
+            }
+            Token::Identifier(name) => {
+                self.advance();
+                Ok(Pattern::Identifier(name))
+            }
+            Token::LBracket => {
+                self.advance();
+                let mut pats = Vec::new();
+                while !matches!(self.peek(), Token::RBracket | Token::Eof) {
+                    pats.push(self.parse_pattern()?);
+                    if matches!(self.peek(), Token::Comma) {
+                        self.advance();
+                    }
+                }
+                self.expect(&Token::RBracket)?;
+                Ok(Pattern::ArrayPattern(pats))
+            }
+            tok => Err(ParseError::new(
+                format!("패턴 예상, '{:?}' 발견", tok),
+                line,
+            )),
+        }
+    }
+
+    fn parse_impl_block(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.span_here();
+        self.advance();
+        let struct_name = match self.advance().clone() {
+            Token::Identifier(n) => n,
+            tok => {
+                return Err(ParseError::new(
+                    format!("구조체 이름 예상, '{:?}' 발견", tok),
+                    span.line,
+                ))
+            }
+        };
+        self.expect(&Token::LBrace)?;
+        let mut methods = Vec::new();
+        while !matches!(self.peek(), Token::RBrace | Token::Eof) {
+            if matches!(self.peek(), Token::함수) {
+                methods.push(self.parse_func_def()?);
+            } else {
+                break;
+            }
+        }
+        self.expect(&Token::RBrace)?;
+        Ok(Stmt::new(
+            StmtKind::ImplBlock {
+                struct_name,
+                methods,
+            },
+            span,
+        ))
     }
 }
 
