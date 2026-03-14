@@ -1,0 +1,75 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "Han",
+  "scopeName": "source.han",
+  "patterns": [
+    { "include": "#comments" },
+    { "include": "#strings" },
+    { "include": "#numbers" },
+    { "include": "#keywords" },
+    { "include": "#types" },
+    { "include": "#constants" },
+    { "include": "#builtins" },
+    { "include": "#functions" },
+    { "include": "#operators" }
+  ],
+  "repository": {
+    "comments": {
+      "match": "//.*$",
+      "name": "comment.line.double-slash.han"
+    },
+    "strings": {
+      "begin": "\"",
+      "end": "\"",
+      "name": "string.quoted.double.han",
+      "patterns": [
+        {
+          "match": "\\\\[nrt\\\\\"0]",
+          "name": "constant.character.escape.han"
+        }
+      ]
+    },
+    "numbers": {
+      "patterns": [
+        {
+          "match": "\\b[0-9]+\\.[0-9]+\\b",
+          "name": "constant.numeric.float.han"
+        },
+        {
+          "match": "\\b[0-9]+\\b",
+          "name": "constant.numeric.integer.han"
+        }
+      ]
+    },
+    "keywords": {
+      "patterns": [
+        {
+          "match": "\\b(함수|반환|변수|상수|만약|아니면|반복|동안|멈춰|계속|구조|시도|실패|가져오기|맞춰|구현)\\b",
+          "name": "keyword.control.han"
+        }
+      ]
+    },
+    "types": {
+      "match": "\\b(정수|실수|문자열|불|없음)\\b",
+      "name": "support.type.han"
+    },
+    "constants": {
+      "match": "\\b(참|거짓)\\b",
+      "name": "constant.language.han"
+    },
+    "builtins": {
+      "match": "\\b(출력|입력|제곱근|절댓값|거듭제곱|정수변환|실수변환|길이|파일읽기|파일쓰기|파일추가|파일존재|형식|출력오류)\\b",
+      "name": "support.function.han"
+    },
+    "functions": {
+      "match": "\\b([가-힣a-zA-Z_][가-힣a-zA-Z0-9_]*)\\s*(?=\\()",
+      "captures": {
+        "1": { "name": "entity.name.function.han" }
+      }
+    },
+    "operators": {
+      "match": "(\\+|\\-|\\*|\\/|%|==|!=|<=|>=|<|>|&&|\\|\\||!|=>|->)",
+      "name": "keyword.operator.han"
+    }
+  }
+}

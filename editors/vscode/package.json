@@ -1,0 +1,48 @@
+{
+  "name": "han-language",
+  "displayName": "Han Language",
+  "description": "Syntax highlighting and LSP support for the Han (한) programming language",
+  "version": "0.1.0",
+  "publisher": "xodn348",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xodn348/han"
+  },
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": ["Programming Languages"],
+  "keywords": ["han", "hangul", "korean", "programming language"],
+  "main": "./out/extension.js",
+  "activationEvents": [
+    "onLanguage:han"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "han",
+        "aliases": ["Han", "한"],
+        "extensions": [".hgl"],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "han",
+        "scopeName": "source.han",
+        "path": "./syntaxes/han.tmLanguage.json"
+      }
+    ]
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.75.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "vscode-languageclient": "^9.0.0"
+  }
+}

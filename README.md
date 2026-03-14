@@ -217,6 +217,15 @@ cargo install --path .
 
 That's it. `hgl` is now available globally.
 
+### VS Code Extension
+
+```bash
+cd editors/vscode
+npm install && npm run compile
+```
+
+Then open the `editors/vscode` folder in VS Code and press `F5` to launch with syntax highlighting + LSP support.
+
 ---
 
 ## CLI Usage
@@ -569,6 +578,8 @@ han/
 │   ├── interpreter.rs   Tree-walking interpreter
 │   ├── codegen.rs       LLVM IR text code generator
 │   └── lsp.rs           LSP server (hover + completion)
+├── editors/
+│   └── vscode/          VS Code extension (syntax highlighting + LSP)
 ├── examples/            Example .hgl programs
 ├── spec/
 │   └── SPEC.md          Formal language specification (EBNF)
