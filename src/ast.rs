@@ -1,4 +1,19 @@
-#![allow(dead_code, unused)]
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct Span {
+    pub line: usize,
+    pub col: usize,
+}
+
+impl Span {
+    pub fn new(line: usize, col: usize) -> Self {
+        Self { line, col }
+    }
+
+    #[cfg(test)]
+    pub fn zero() -> Self {
+        Self { line: 0, col: 0 }
+    }
+}
 
 /// Han 언어 타입 시스템
 #[derive(Debug, Clone, PartialEq)]
@@ -13,30 +28,24 @@ pub enum Type {
 /// 표현식 AST 노드
 #[derive(Debug, Clone)]
 pub enum Expr {
-    // 리터럴
     IntLiteral(i64),
     FloatLiteral(f64),
     StringLiteral(String),
     BoolLiteral(bool),
-    // 식별자
     Identifier(String),
-    // 이항 연산: left op right
     BinaryOp {
         op: BinaryOpKind,
         left: Box<Expr>,
         right: Box<Expr>,
     },
-    // 단항 연산: op expr
     UnaryOp {
         op: UnaryOpKind,
         expr: Box<Expr>,
     },
-    // 함수 호출: name(args)
     Call {
         name: String,
         args: Vec<Expr>,
     },
-    // 할당: name = value
     Assign {
         name: String,
         value: Box<Expr>,
@@ -66,48 +75,61 @@ pub enum UnaryOpKind {
     Not, // !x
 }
 
-/// 문장 AST 노드
+/// 문장 AST — Span 포함 wrapper
 #[derive(Debug, Clone)]
-pub enum Stmt {
-    // 변수 선언: 변수 name: type = value
+pub struct Stmt {
+    pub kind: StmtKind,
+    pub span: Span,
+}
+
+impl Stmt {
+    pub fn new(kind: StmtKind, span: Span) -> Self {
+        Self { kind, span }
+    }
+
+    #[cfg(test)]
+    pub fn unspanned(kind: StmtKind) -> Self {
+        Self {
+            kind,
+            span: Span::zero(),
+        }
+    }
+}
+
+/// 문장 내부 종류
+#[derive(Debug, Clone)]
+pub enum StmtKind {
     VarDecl {
         name: String,
         ty: Option<Type>,
         value: Expr,
+        #[allow(dead_code)]
         mutable: bool,
     },
-    // 함수 정의: 함수 name(params) -> return_type { body }
     FuncDef {
         name: String,
         params: Vec<(String, Type)>,
         return_type: Option<Type>,
         body: Vec<Stmt>,
     },
-    // 반환문: 반환 value
     Return(Option<Expr>),
-    // 조건문: 만약 cond { then } 아니면 { else }
     If {
         cond: Expr,
         then_block: Vec<Stmt>,
         else_block: Option<Vec<Stmt>>,
     },
-    // for 반복문: 반복 init; cond; step { body }
     ForLoop {
         init: Box<Stmt>,
         cond: Expr,
         step: Box<Stmt>,
         body: Vec<Stmt>,
     },
-    // while 반복문: 동안 cond { body }
     WhileLoop {
         cond: Expr,
         body: Vec<Stmt>,
     },
-    // 멈춰
     Break,
-    // 계속
     Continue,
-    // 표현식 문장
     ExprStmt(Expr),
 }
 
@@ -141,5 +163,19 @@ mod tests {
     fn test_program_new() {
         let prog = Program::new(vec![]);
         assert_eq!(prog.stmts.len(), 0);
+    }
+
+    #[test]
+    fn test_span() {
+        let span = Span::new(10, 5);
+        assert_eq!(span.line, 10);
+        assert_eq!(span.col, 5);
+    }
+
+    #[test]
+    fn test_stmt_with_span() {
+        let stmt = Stmt::new(StmtKind::ExprStmt(Expr::IntLiteral(42)), Span::new(1, 0));
+        assert_eq!(stmt.span.line, 1);
+        assert!(matches!(stmt.kind, StmtKind::ExprStmt(_)));
     }
 }

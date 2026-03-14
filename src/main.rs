@@ -1,4 +1,3 @@
-#![allow(dead_code, unused)]
 mod ast;
 mod codegen;
 mod interpreter;
@@ -7,6 +6,7 @@ mod parser;
 
 use clap::{Parser, Subcommand};
 use std::fs;
+use std::io::{self, BufRead, Write};
 use std::path::Path;
 use std::process::{self, Command};
 
@@ -22,6 +22,7 @@ enum Commands {
     Build { file: String },
     Run { file: String },
     Interpret { file: String },
+    Repl,
 }
 
 fn run_pipeline(source: &str) -> ast::Program {
@@ -33,6 +34,11 @@ fn run_pipeline(source: &str) -> ast::Program {
             process::exit(1);
         }
     }
+}
+
+fn try_parse(source: &str) -> Result<ast::Program, parser::ParseError> {
+    let tokens = lexer::tokenize(source);
+    parser::parse(tokens)
 }
 
 fn output_binary_name(file_path: &str) -> String {
@@ -66,6 +72,55 @@ fn compile_to_binary(source: &str, output_path: &str) -> Result<(), String> {
         )),
         Ok(_) => Ok(()),
     }
+}
+
+fn run_repl() {
+    println!("Han (한) REPL v0.1.0");
+    println!("종료: Ctrl+D 또는 '나가기' 입력\n");
+
+    let stdin = io::stdin();
+    let mut env = interpreter::Environment::new();
+
+    loop {
+        print!("한> ");
+        io::stdout().flush().unwrap();
+
+        let mut line = String::new();
+        match stdin.lock().read_line(&mut line) {
+            Ok(0) => break,
+            Err(e) => {
+                eprintln!("입력 오류: {}", e);
+                break;
+            }
+            Ok(_) => {}
+        }
+
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        if trimmed == "나가기" {
+            break;
+        }
+
+        match try_parse(trimmed) {
+            Ok(program) => match interpreter::eval_block(&program.stmts, &mut env) {
+                Ok(_) => {}
+                Err(e) => {
+                    if e.line > 0 {
+                        eprintln!("[에러] {}번째 줄: {}", e.line, e.message);
+                    } else {
+                        eprintln!("[에러] {}", e.message);
+                    }
+                }
+            },
+            Err(e) => {
+                eprintln!("[파서 에러] {}", e.message);
+            }
+        }
+    }
+
+    println!("\n안녕히 가세요!");
 }
 
 fn main() {
@@ -125,10 +180,18 @@ fn main() {
             match interpreter::interpret(program) {
                 Ok(()) => {}
                 Err(e) => {
-                    eprintln!("[런타임 에러] {}", e.message);
+                    if e.line > 0 {
+                        eprintln!("[런타임 에러] {}번째 줄: {}", e.line, e.message);
+                    } else {
+                        eprintln!("[런타임 에러] {}", e.message);
+                    }
                     process::exit(1);
                 }
             }
+        }
+
+        Commands::Repl => {
+            run_repl();
         }
     }
 }

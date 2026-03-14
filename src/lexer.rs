@@ -1,5 +1,3 @@
-#![allow(dead_code, unused)]
-
 use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -25,6 +23,7 @@ pub enum Token {
     실수타입,
     문자열타입,
     불타입,
+    #[allow(dead_code)]
     없음타입,
     // 리터럴
     IntLiteral(i64),
@@ -216,9 +215,7 @@ impl Lexer {
             if c.is_ascii_digit() {
                 num.push(c);
                 self.advance();
-            } else if c == '.'
-                && !is_float
-                && self.peek_next().map_or(false, |n| n.is_ascii_digit())
+            } else if c == '.' && !is_float && self.peek_next().is_some_and(|n| n.is_ascii_digit())
             {
                 is_float = true;
                 num.push(c);

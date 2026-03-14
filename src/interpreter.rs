@@ -1,10 +1,7 @@
-#![allow(dead_code, unused)]
-
-use crate::ast::{BinaryOpKind, Expr, Program, Stmt, Type, UnaryOpKind};
+use crate::ast::{BinaryOpKind, Expr, Program, Stmt, StmtKind, Type, UnaryOpKind};
 use std::collections::HashMap;
 use std::io::{self, BufRead};
 
-/// 런타임 값
 #[derive(Debug, Clone)]
 pub enum Value {
     Int(i64),
@@ -31,28 +28,27 @@ impl std::fmt::Display for Value {
     }
 }
 
-/// 런타임 에러
 #[derive(Debug)]
 pub struct RuntimeError {
     pub message: String,
+    pub line: usize,
 }
 
 impl RuntimeError {
-    pub fn new(msg: impl Into<String>) -> Self {
+    pub fn new(msg: impl Into<String>, line: usize) -> Self {
         Self {
             message: msg.into(),
+            line,
         }
     }
 }
 
-/// 변수 환경 (스코프 체인)
 pub struct Environment {
     store: HashMap<String, Value>,
     outer: Option<Box<Environment>>,
 }
 
 impl Environment {
-    /// 새 최상위 환경
     pub fn new() -> Self {
         Self {
             store: HashMap::new(),
@@ -60,7 +56,7 @@ impl Environment {
         }
     }
 
-    /// 새 중첩 환경 (함수 호출 시)
+    #[cfg(test)]
     pub fn new_enclosed(outer: Environment) -> Self {
         Self {
             store: HashMap::new(),
@@ -68,7 +64,6 @@ impl Environment {
         }
     }
 
-    /// 변수 조회 (현재 → 외부 순)
     pub fn get(&self, name: &str) -> Option<Value> {
         match self.store.get(name) {
             Some(v) => Some(v.clone()),
@@ -76,12 +71,10 @@ impl Environment {
         }
     }
 
-    /// 변수 설정 (현재 스코프)
     pub fn set(&mut self, name: String, val: Value) {
         self.store.insert(name, val);
     }
 
-    /// 변수 업데이트 (존재하는 스코프에서)
     pub fn update(&mut self, name: &str, val: Value) -> bool {
         if self.store.contains_key(name) {
             self.store.insert(name.to_string(), val);
@@ -111,15 +104,13 @@ impl Environment {
     }
 }
 
-/// 조기 종료 신호 (반환, 멈춰, 계속)
 pub enum Signal {
     Return(Value),
     Break,
     Continue,
 }
 
-/// 표현식 평가 → Value
-pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, RuntimeError> {
+pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Value, RuntimeError> {
     match expr {
         Expr::IntLiteral(n) => Ok(Value::Int(*n)),
         Expr::FloatLiteral(f) => Ok(Value::Float(*f)),
@@ -128,80 +119,86 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, RuntimeErr
 
         Expr::Identifier(name) => env
             .get(name)
-            .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 변수: {}", name))),
+            .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 변수: {}", name), line)),
 
         Expr::Assign { name, value } => {
-            let val = eval_expr(value, env)?;
+            let val = eval_expr(value, env, line)?;
             if !env.update(name, val.clone()) {
-                // 현재 스코프에 없으면 새로 설정
                 env.set(name.clone(), val.clone());
             }
             Ok(val)
         }
 
         Expr::BinaryOp { op, left, right } => {
-            let lv = eval_expr(left, env)?;
-            let rv = eval_expr(right, env)?;
-            eval_binary_op(op, lv, rv)
+            let lv = eval_expr(left, env, line)?;
+            let rv = eval_expr(right, env, line)?;
+            eval_binary_op(op, lv, rv, line)
         }
 
         Expr::UnaryOp { op, expr } => {
-            let val = eval_expr(expr, env)?;
+            let val = eval_expr(expr, env, line)?;
             match op {
                 UnaryOpKind::Neg => match val {
                     Value::Int(n) => Ok(Value::Int(-n)),
                     Value::Float(f) => Ok(Value::Float(-f)),
-                    _ => Err(RuntimeError::new("단항 음수는 정수/실수에만 적용 가능")),
+                    _ => Err(RuntimeError::new(
+                        "단항 음수는 정수/실수에만 적용 가능",
+                        line,
+                    )),
                 },
                 UnaryOpKind::Not => match val {
                     Value::Bool(b) => Ok(Value::Bool(!b)),
-                    _ => Err(RuntimeError::new("논리 부정은 불 값에만 적용 가능")),
+                    _ => Err(RuntimeError::new("논리 부정은 불 값에만 적용 가능", line)),
                 },
             }
         }
 
         Expr::Call { name, args } => {
-            // 내장 함수: 출력
             if name == "출력" {
                 let mut parts = Vec::new();
                 for arg in args {
-                    let v = eval_expr(arg, env)?;
+                    let v = eval_expr(arg, env, line)?;
                     parts.push(v.to_string());
                 }
                 println!("{}", parts.join(" "));
                 return Ok(Value::Void);
             }
 
-            // 내장 함수: 입력
             if name == "입력" {
                 let stdin = io::stdin();
-                let mut line = String::new();
+                let mut buf = String::new();
                 stdin
                     .lock()
-                    .read_line(&mut line)
-                    .map_err(|e| RuntimeError::new(format!("입력 오류: {}", e)))?;
-                return Ok(Value::Str(line.trim_end_matches('\n').to_string()));
+                    .read_line(&mut buf)
+                    .map_err(|e| RuntimeError::new(format!("입력 오류: {}", e), line))?;
+                return Ok(Value::Str(buf.trim_end_matches('\n').to_string()));
             }
 
-            // 사용자 정의 함수 호출
+            if let Some(result) = eval_builtin_math(name, args, env, line)? {
+                return Ok(result);
+            }
+
             let func_val = env
                 .get(name)
-                .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 함수: {}", name)))?;
+                .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 함수: {}", name), line))?;
 
             match func_val {
                 Value::Function { params, body } => {
                     if args.len() != params.len() {
-                        return Err(RuntimeError::new(format!(
-                            "함수 '{}': 인자 수 불일치 (기대 {}, 실제 {})",
-                            name,
-                            params.len(),
-                            args.len()
-                        )));
+                        return Err(RuntimeError::new(
+                            format!(
+                                "함수 '{}': 인자 수 불일치 (기대 {}, 실제 {})",
+                                name,
+                                params.len(),
+                                args.len()
+                            ),
+                            line,
+                        ));
                     }
 
                     let mut arg_vals = Vec::new();
                     for arg in args {
-                        arg_vals.push(eval_expr(arg, env)?);
+                        arg_vals.push(eval_expr(arg, env, line)?);
                     }
 
                     let mut func_env = Environment::new();
@@ -217,67 +214,163 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment) -> Result<Value, RuntimeErr
                         _ => Ok(Value::Void),
                     }
                 }
-                _ => Err(RuntimeError::new(format!("'{}' 는 함수가 아닙니다", name))),
+                _ => Err(RuntimeError::new(
+                    format!("'{}' 는 함수가 아닙니다", name),
+                    line,
+                )),
             }
         }
     }
 }
 
-fn eval_binary_op(op: &BinaryOpKind, lv: Value, rv: Value) -> Result<Value, RuntimeError> {
+fn eval_builtin_math(
+    name: &str,
+    args: &[Expr],
+    env: &mut Environment,
+    line: usize,
+) -> Result<Option<Value>, RuntimeError> {
+    match name {
+        "제곱근" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("제곱근: 인자 1개 필요", line));
+            }
+            let v = eval_expr(&args[0], env, line)?;
+            match v {
+                Value::Int(n) => Ok(Some(Value::Float((n as f64).sqrt()))),
+                Value::Float(f) => Ok(Some(Value::Float(f.sqrt()))),
+                _ => Err(RuntimeError::new("제곱근: 숫자 타입 필요", line)),
+            }
+        }
+        "절댓값" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("절댓값: 인자 1개 필요", line));
+            }
+            let v = eval_expr(&args[0], env, line)?;
+            match v {
+                Value::Int(n) => Ok(Some(Value::Int(n.abs()))),
+                Value::Float(f) => Ok(Some(Value::Float(f.abs()))),
+                _ => Err(RuntimeError::new("절댓값: 숫자 타입 필요", line)),
+            }
+        }
+        "거듭제곱" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::new(
+                    "거듭제곱: 인자 2개 필요 (밑, 지수)",
+                    line,
+                ));
+            }
+            let base = eval_expr(&args[0], env, line)?;
+            let exp = eval_expr(&args[1], env, line)?;
+            match (base, exp) {
+                (Value::Int(b), Value::Int(e)) => Ok(Some(Value::Float((b as f64).powf(e as f64)))),
+                (Value::Float(b), Value::Float(e)) => Ok(Some(Value::Float(b.powf(e)))),
+                (Value::Float(b), Value::Int(e)) => Ok(Some(Value::Float(b.powf(e as f64)))),
+                (Value::Int(b), Value::Float(e)) => Ok(Some(Value::Float((b as f64).powf(e)))),
+                _ => Err(RuntimeError::new("거듭제곱: 숫자 타입 필요", line)),
+            }
+        }
+        "정수변환" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("정수변환: 인자 1개 필요", line));
+            }
+            let v = eval_expr(&args[0], env, line)?;
+            match v {
+                Value::Int(n) => Ok(Some(Value::Int(n))),
+                Value::Float(f) => Ok(Some(Value::Int(f as i64))),
+                Value::Str(s) => s
+                    .parse::<i64>()
+                    .map(|n| Some(Value::Int(n)))
+                    .map_err(|_| RuntimeError::new(format!("정수변환 실패: '{}'", s), line)),
+                Value::Bool(b) => Ok(Some(Value::Int(if b { 1 } else { 0 }))),
+                _ => Err(RuntimeError::new("정수변환: 변환 불가 타입", line)),
+            }
+        }
+        "실수변환" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("실수변환: 인자 1개 필요", line));
+            }
+            let v = eval_expr(&args[0], env, line)?;
+            match v {
+                Value::Int(n) => Ok(Some(Value::Float(n as f64))),
+                Value::Float(f) => Ok(Some(Value::Float(f))),
+                Value::Str(s) => s
+                    .parse::<f64>()
+                    .map(|f| Some(Value::Float(f)))
+                    .map_err(|_| RuntimeError::new(format!("실수변환 실패: '{}'", s), line)),
+                _ => Err(RuntimeError::new("실수변환: 변환 불가 타입", line)),
+            }
+        }
+        "길이" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("길이: 인자 1개 필요", line));
+            }
+            let v = eval_expr(&args[0], env, line)?;
+            match v {
+                Value::Str(s) => Ok(Some(Value::Int(s.chars().count() as i64))),
+                _ => Err(RuntimeError::new("길이: 문자열 타입 필요", line)),
+            }
+        }
+        _ => Ok(None),
+    }
+}
+
+fn eval_binary_op(
+    op: &BinaryOpKind,
+    lv: Value,
+    rv: Value,
+    line: usize,
+) -> Result<Value, RuntimeError> {
     match op {
-        // 산술
         BinaryOpKind::Add => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a + b)),
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a + b)),
             (Value::Str(a), Value::Str(b)) => Ok(Value::Str(a + &b)),
-            _ => Err(RuntimeError::new("+ 연산: 타입 불일치")),
+            _ => Err(RuntimeError::new("+ 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Sub => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a - b)),
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a - b)),
-            _ => Err(RuntimeError::new("- 연산: 타입 불일치")),
+            _ => Err(RuntimeError::new("- 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Mul => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a * b)),
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a * b)),
-            _ => Err(RuntimeError::new("* 연산: 타입 불일치")),
+            _ => Err(RuntimeError::new("* 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Div => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => {
                 if b == 0 {
-                    Err(RuntimeError::new("0으로 나눌 수 없습니다"))
+                    Err(RuntimeError::new("0으로 나눌 수 없습니다", line))
                 } else {
                     Ok(Value::Int(a / b))
                 }
             }
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a / b)),
-            _ => Err(RuntimeError::new("/ 연산: 타입 불일치")),
+            _ => Err(RuntimeError::new("/ 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Mod => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => {
                 if b == 0 {
-                    Err(RuntimeError::new("0으로 나머지 연산 불가"))
+                    Err(RuntimeError::new("0으로 나머지 연산 불가", line))
                 } else {
                     Ok(Value::Int(a % b))
                 }
             }
-            _ => Err(RuntimeError::new("% 연산: 정수에만 적용 가능")),
+            _ => Err(RuntimeError::new("% 연산: 정수에만 적용 가능", line)),
         },
-        // 비교
         BinaryOpKind::Eq => Ok(Value::Bool(values_equal(&lv, &rv))),
         BinaryOpKind::NotEq => Ok(Value::Bool(!values_equal(&lv, &rv))),
-        BinaryOpKind::Lt => compare_values(lv, rv, |a, b| a < b),
-        BinaryOpKind::Gt => compare_values(lv, rv, |a, b| a > b),
-        BinaryOpKind::LtEq => compare_values(lv, rv, |a, b| a <= b),
-        BinaryOpKind::GtEq => compare_values(lv, rv, |a, b| a >= b),
-        // 논리
+        BinaryOpKind::Lt => compare_values(lv, rv, |a, b| a < b, line),
+        BinaryOpKind::Gt => compare_values(lv, rv, |a, b| a > b, line),
+        BinaryOpKind::LtEq => compare_values(lv, rv, |a, b| a <= b, line),
+        BinaryOpKind::GtEq => compare_values(lv, rv, |a, b| a >= b, line),
         BinaryOpKind::And => match (lv, rv) {
             (Value::Bool(a), Value::Bool(b)) => Ok(Value::Bool(a && b)),
-            _ => Err(RuntimeError::new("&& 연산: 불 값에만 적용 가능")),
+            _ => Err(RuntimeError::new("&& 연산: 불 값에만 적용 가능", line)),
         },
         BinaryOpKind::Or => match (lv, rv) {
             (Value::Bool(a), Value::Bool(b)) => Ok(Value::Bool(a || b)),
-            _ => Err(RuntimeError::new("|| 연산: 불 값에만 적용 가능")),
+            _ => Err(RuntimeError::new("|| 연산: 불 값에만 적용 가능", line)),
         },
     }
 }
@@ -293,27 +386,30 @@ fn values_equal(a: &Value, b: &Value) -> bool {
     }
 }
 
-fn compare_values<F>(lv: Value, rv: Value, cmp: F) -> Result<Value, RuntimeError>
+fn compare_values<F>(lv: Value, rv: Value, cmp: F, line: usize) -> Result<Value, RuntimeError>
 where
     F: Fn(f64, f64) -> bool,
 {
     match (lv, rv) {
         (Value::Int(a), Value::Int(b)) => Ok(Value::Bool(cmp(a as f64, b as f64))),
         (Value::Float(a), Value::Float(b)) => Ok(Value::Bool(cmp(a, b))),
-        _ => Err(RuntimeError::new("비교 연산: 숫자 타입에만 적용 가능")),
+        _ => Err(RuntimeError::new(
+            "비교 연산: 숫자 타입에만 적용 가능",
+            line,
+        )),
     }
 }
 
-/// 문장 실행 → Option<Signal>
 pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, RuntimeError> {
-    match stmt {
-        Stmt::VarDecl { name, value, .. } => {
-            let val = eval_expr(value, env)?;
+    let line = stmt.span.line;
+    match &stmt.kind {
+        StmtKind::VarDecl { name, value, .. } => {
+            let val = eval_expr(value, env, line)?;
             env.set(name.clone(), val);
             Ok(None)
         }
 
-        Stmt::FuncDef {
+        StmtKind::FuncDef {
             name, params, body, ..
         } => {
             let func = Value::Function {
@@ -324,20 +420,20 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
             Ok(None)
         }
 
-        Stmt::Return(expr_opt) => {
+        StmtKind::Return(expr_opt) => {
             let val = match expr_opt {
-                Some(expr) => eval_expr(expr, env)?,
+                Some(expr) => eval_expr(expr, env, line)?,
                 None => Value::Void,
             };
             Ok(Some(Signal::Return(val)))
         }
 
-        Stmt::If {
+        StmtKind::If {
             cond,
             then_block,
             else_block,
         } => {
-            let cond_val = eval_expr(cond, env)?;
+            let cond_val = eval_expr(cond, env, line)?;
             match cond_val {
                 Value::Bool(true) => eval_block(then_block, env),
                 Value::Bool(false) => {
@@ -347,17 +443,17 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
                         Ok(None)
                     }
                 }
-                _ => Err(RuntimeError::new("조건문: 불 값이 필요합니다")),
+                _ => Err(RuntimeError::new("조건문: 불 값이 필요합니다", line)),
             }
         }
 
-        Stmt::WhileLoop { cond, body } => {
+        StmtKind::WhileLoop { cond, body } => {
             loop {
-                let cond_val = eval_expr(cond, env)?;
+                let cond_val = eval_expr(cond, env, line)?;
                 match cond_val {
                     Value::Bool(true) => {}
                     Value::Bool(false) => break,
-                    _ => return Err(RuntimeError::new("동안 조건: 불 값이 필요합니다")),
+                    _ => return Err(RuntimeError::new("동안 조건: 불 값이 필요합니다", line)),
                 }
                 match eval_block(body, env)? {
                     Some(Signal::Break) => break,
@@ -369,7 +465,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
             Ok(None)
         }
 
-        Stmt::ForLoop {
+        StmtKind::ForLoop {
             init,
             cond,
             step,
@@ -377,11 +473,11 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
         } => {
             eval_stmt(init, env)?;
             loop {
-                let cond_val = eval_expr(cond, env)?;
+                let cond_val = eval_expr(cond, env, line)?;
                 match cond_val {
                     Value::Bool(true) => {}
                     Value::Bool(false) => break,
-                    _ => return Err(RuntimeError::new("반복 조건: 불 값이 필요합니다")),
+                    _ => return Err(RuntimeError::new("반복 조건: 불 값이 필요합니다", line)),
                 }
                 match eval_block(body, env)? {
                     Some(Signal::Break) => break,
@@ -397,17 +493,16 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
             Ok(None)
         }
 
-        Stmt::Break => Ok(Some(Signal::Break)),
-        Stmt::Continue => Ok(Some(Signal::Continue)),
+        StmtKind::Break => Ok(Some(Signal::Break)),
+        StmtKind::Continue => Ok(Some(Signal::Continue)),
 
-        Stmt::ExprStmt(expr) => {
-            eval_expr(expr, env)?;
+        StmtKind::ExprStmt(expr) => {
+            eval_expr(expr, env, line)?;
             Ok(None)
         }
     }
 }
 
-/// 블록(문장 목록) 실행
 pub fn eval_block(stmts: &[Stmt], env: &mut Environment) -> Result<Option<Signal>, RuntimeError> {
     for stmt in stmts {
         if let Some(sig) = eval_stmt(stmt, env)? {
@@ -417,7 +512,6 @@ pub fn eval_block(stmts: &[Stmt], env: &mut Environment) -> Result<Option<Signal
     Ok(None)
 }
 
-/// 공개 진입점
 pub fn interpret(program: Program) -> Result<(), RuntimeError> {
     let mut env = Environment::new();
     eval_block(&program.stmts, &mut env)?;
@@ -462,7 +556,6 @@ mod tests {
 
     #[test]
     fn test_eval_arithmetic() {
-        use crate::ast::{BinaryOpKind, Expr};
         let mut env = Environment::new();
         let expr = Expr::BinaryOp {
             op: BinaryOpKind::Add,
@@ -473,56 +566,55 @@ mod tests {
                 right: Box::new(Expr::IntLiteral(2)),
             }),
         };
-        let result = eval_expr(&expr, &mut env).unwrap();
+        let result = eval_expr(&expr, &mut env, 0).unwrap();
         assert!(matches!(result, Value::Int(13)));
     }
 
     #[test]
     fn test_eval_var_decl() {
-        use crate::ast::{Expr, Stmt};
         let mut env = Environment::new();
-        let stmt = Stmt::VarDecl {
+        let stmt = Stmt::unspanned(StmtKind::VarDecl {
             name: "나이".to_string(),
             ty: None,
             value: Expr::IntLiteral(20),
             mutable: true,
-        };
+        });
         eval_stmt(&stmt, &mut env).unwrap();
         assert!(matches!(env.get("나이"), Some(Value::Int(20))));
     }
 
     #[test]
     fn test_eval_if_stmt() {
-        use crate::ast::{Expr, Stmt};
         let mut env = Environment::new();
-        let stmt = Stmt::If {
+        let stmt = Stmt::unspanned(StmtKind::If {
             cond: Expr::BoolLiteral(true),
-            then_block: vec![Stmt::VarDecl {
+            then_block: vec![Stmt::unspanned(StmtKind::VarDecl {
                 name: "x".to_string(),
                 ty: None,
                 value: Expr::IntLiteral(1),
                 mutable: false,
-            }],
+            })],
             else_block: None,
-        };
+        });
         eval_stmt(&stmt, &mut env).unwrap();
         assert!(matches!(env.get("x"), Some(Value::Int(1))));
     }
 
     #[test]
     fn test_eval_fibonacci() {
-        use crate::ast::{BinaryOpKind, Expr, Program, Stmt, Type};
         let fib_body = vec![
-            Stmt::If {
+            Stmt::unspanned(StmtKind::If {
                 cond: Expr::BinaryOp {
                     op: BinaryOpKind::LtEq,
                     left: Box::new(Expr::Identifier("n".to_string())),
                     right: Box::new(Expr::IntLiteral(1)),
                 },
-                then_block: vec![Stmt::Return(Some(Expr::Identifier("n".to_string())))],
+                then_block: vec![Stmt::unspanned(StmtKind::Return(Some(Expr::Identifier(
+                    "n".to_string(),
+                ))))],
                 else_block: None,
-            },
-            Stmt::Return(Some(Expr::BinaryOp {
+            }),
+            Stmt::unspanned(StmtKind::Return(Some(Expr::BinaryOp {
                 op: BinaryOpKind::Add,
                 left: Box::new(Expr::Call {
                     name: "피보나치".to_string(),
@@ -540,17 +632,17 @@ mod tests {
                         right: Box::new(Expr::IntLiteral(2)),
                     }],
                 }),
-            })),
+            }))),
         ];
 
         let program = Program::new(vec![
-            Stmt::FuncDef {
+            Stmt::unspanned(StmtKind::FuncDef {
                 name: "피보나치".to_string(),
                 params: vec![("n".to_string(), Type::정수)],
                 return_type: Some(Type::정수),
                 body: fib_body,
-            },
-            Stmt::VarDecl {
+            }),
+            Stmt::unspanned(StmtKind::VarDecl {
                 name: "결과".to_string(),
                 ty: None,
                 value: Expr::Call {
@@ -558,7 +650,7 @@ mod tests {
                     args: vec![Expr::IntLiteral(10)],
                 },
                 mutable: false,
-            },
+            }),
         ]);
 
         let mut env = Environment::new();
@@ -568,11 +660,10 @@ mod tests {
 
     #[test]
     fn test_출력() {
-        use crate::ast::{Expr, Program, Stmt};
-        let program = Program::new(vec![Stmt::ExprStmt(Expr::Call {
+        let program = Program::new(vec![Stmt::unspanned(StmtKind::ExprStmt(Expr::Call {
             name: "출력".to_string(),
             args: vec![Expr::StringLiteral("안녕".to_string())],
-        })]);
+        }))]);
         let result = interpret(program);
         assert!(result.is_ok());
     }

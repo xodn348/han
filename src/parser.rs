@@ -1,4 +1,3 @@
-#![allow(dead_code, unused)]
 
 use crate::ast::*;
 use crate::lexer::{Token, TokenWithPos};
@@ -35,7 +34,6 @@ impl Parser {
     // ── Cursor helpers ────────────────────────────────────────────────────────
 
     fn peek(&self) -> &Token {
-        // Skip newlines transparently
         let mut i = self.pos;
         while i < self.tokens.len() {
             if !matches!(self.tokens[i].token, Token::Newline) {
@@ -57,8 +55,12 @@ impl Parser {
         (0, 0)
     }
 
+    fn span_here(&self) -> Span {
+        let (line, col) = self.peek_pos();
+        Span::new(line, col)
+    }
+
     fn advance(&mut self) -> &Token {
-        // Skip newlines
         while self.pos < self.tokens.len() && matches!(self.tokens[self.pos].token, Token::Newline)
         {
             self.pos += 1;
@@ -103,60 +105,58 @@ impl Parser {
     // ── Statement dispatch ────────────────────────────────────────────────────
 
     fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.span_here();
         match self.peek().clone() {
             Token::함수 => self.parse_func_def(),
             Token::변수 => {
                 self.advance();
-                self.parse_var_decl(true)
+                self.parse_var_decl(true, span)
             }
             Token::상수 => {
                 self.advance();
-                self.parse_var_decl(false)
+                self.parse_var_decl(false, span)
             }
             Token::만약 => self.parse_if_stmt(),
             Token::반복 => self.parse_for_loop(),
             Token::동안 => self.parse_while_loop(),
             Token::반환 => {
-                let (line, _) = self.peek_pos();
                 self.advance();
-                // Optional expression after 반환
                 if self.is_at_end()
                     || matches!(self.peek(), Token::RBrace | Token::Newline | Token::Eof)
                 {
-                    Ok(Stmt::Return(None))
+                    Ok(Stmt::new(StmtKind::Return(None), span))
                 } else {
                     let expr = self.parse_expr()?;
-                    Ok(Stmt::Return(Some(expr)))
+                    Ok(Stmt::new(StmtKind::Return(Some(expr)), span))
                 }
             }
             Token::멈춰 => {
                 self.advance();
-                Ok(Stmt::Break)
+                Ok(Stmt::new(StmtKind::Break, span))
             }
             Token::계속 => {
                 self.advance();
-                Ok(Stmt::Continue)
+                Ok(Stmt::new(StmtKind::Continue, span))
             }
             _ => {
                 let expr = self.parse_expr()?;
-                Ok(Stmt::ExprStmt(expr))
+                Ok(Stmt::new(StmtKind::ExprStmt(expr), span))
             }
         }
     }
 
     // ── Function definition ───────────────────────────────────────────────────
-    // 함수 name(param: type, ...) -> return_type { body }
 
     fn parse_func_def(&mut self) -> Result<Stmt, ParseError> {
-        let (line, _) = self.peek_pos();
-        self.advance(); // consume 함수
+        let span = self.span_here();
+        self.advance();
 
         let name = match self.advance().clone() {
             Token::Identifier(n) => n,
             tok => {
                 return Err(ParseError::new(
                     format!("함수 이름 예상, '{:?}' 발견", tok),
-                    line,
+                    span.line,
                 ))
             }
         };
@@ -170,7 +170,7 @@ impl Parser {
                 tok => {
                     return Err(ParseError::new(
                         format!("매개변수 이름 예상, '{:?}' 발견", tok),
-                        line,
+                        span.line,
                     ))
                 }
             };
@@ -193,26 +193,26 @@ impl Parser {
 
         let body = self.parse_block()?;
 
-        Ok(Stmt::FuncDef {
-            name,
-            params,
-            return_type,
-            body,
-        })
+        Ok(Stmt::new(
+            StmtKind::FuncDef {
+                name,
+                params,
+                return_type,
+                body,
+            },
+            span,
+        ))
     }
 
     // ── Variable declaration ──────────────────────────────────────────────────
-    // 변수/상수 name [: type] = expr
 
-    fn parse_var_decl(&mut self, mutable: bool) -> Result<Stmt, ParseError> {
-        let (line, _) = self.peek_pos();
-
+    fn parse_var_decl(&mut self, mutable: bool, span: Span) -> Result<Stmt, ParseError> {
         let name = match self.advance().clone() {
             Token::Identifier(n) => n,
             tok => {
                 return Err(ParseError::new(
-                    format!("Expected variable name, got {:?}", tok),
-                    line,
+                    format!("변수 이름 예상, '{:?}' 발견", tok),
+                    span.line,
                 ))
             }
         };
@@ -227,90 +227,100 @@ impl Parser {
         self.expect(&Token::Eq)?;
         let value = self.parse_expr()?;
 
-        Ok(Stmt::VarDecl {
-            name,
-            ty,
-            value,
-            mutable,
-        })
+        Ok(Stmt::new(
+            StmtKind::VarDecl {
+                name,
+                ty,
+                value,
+                mutable,
+            },
+            span,
+        ))
     }
 
     // ── If statement ──────────────────────────────────────────────────────────
-    // 만약 cond { then } [아니면 { else }]
 
     fn parse_if_stmt(&mut self) -> Result<Stmt, ParseError> {
-        self.advance(); // consume 만약
+        let span = self.span_here();
+        self.advance();
         let cond = self.parse_expr()?;
         let then_block = self.parse_block()?;
 
         let else_block = if matches!(self.peek(), Token::아니면) {
             self.advance();
-            Some(self.parse_block()?)
+            // 아니면 만약 → else-if chaining
+            if matches!(self.peek(), Token::만약) {
+                let nested_if = self.parse_if_stmt()?;
+                Some(vec![nested_if])
+            } else {
+                Some(self.parse_block()?)
+            }
         } else {
             None
         };
 
-        Ok(Stmt::If {
-            cond,
-            then_block,
-            else_block,
-        })
+        Ok(Stmt::new(
+            StmtKind::If {
+                cond,
+                then_block,
+                else_block,
+            },
+            span,
+        ))
     }
 
     // ── For loop ──────────────────────────────────────────────────────────────
-    // 반복 init; cond; step { body }
 
     fn parse_for_loop(&mut self) -> Result<Stmt, ParseError> {
-        let (line, _) = self.peek_pos();
-        self.advance(); // consume 반복
+        let span = self.span_here();
+        self.advance();
 
-        // init: 변수 i = 0
+        let init_span = self.span_here();
         let init = if matches!(self.peek(), Token::변수) {
             self.advance();
-            self.parse_var_decl(true)?
+            self.parse_var_decl(true, init_span)?
         } else if matches!(self.peek(), Token::상수) {
             self.advance();
-            self.parse_var_decl(false)?
+            self.parse_var_decl(false, init_span)?
         } else {
             let expr = self.parse_expr()?;
-            Stmt::ExprStmt(expr)
+            Stmt::new(StmtKind::ExprStmt(expr), init_span)
         };
 
         self.expect(&Token::Semicolon)?;
-
         let cond = self.parse_expr()?;
-
         self.expect(&Token::Semicolon)?;
 
-        // step: expression statement (e.g. i += 1)
+        let step_span = self.span_here();
         let step_expr = self.parse_expr()?;
-        let step = Stmt::ExprStmt(step_expr);
+        let step = Stmt::new(StmtKind::ExprStmt(step_expr), step_span);
 
         let body = self.parse_block()?;
 
-        Ok(Stmt::ForLoop {
-            init: Box::new(init),
-            cond,
-            step: Box::new(step),
-            body,
-        })
+        Ok(Stmt::new(
+            StmtKind::ForLoop {
+                init: Box::new(init),
+                cond,
+                step: Box::new(step),
+                body,
+            },
+            span,
+        ))
     }
 
     // ── While loop ────────────────────────────────────────────────────────────
-    // 동안 cond { body }
 
     fn parse_while_loop(&mut self) -> Result<Stmt, ParseError> {
-        self.advance(); // consume 동안
+        let span = self.span_here();
+        self.advance();
         let cond = self.parse_expr()?;
         let body = self.parse_block()?;
-        Ok(Stmt::WhileLoop { cond, body })
+        Ok(Stmt::new(StmtKind::WhileLoop { cond, body }, span))
     }
 
     // ── Block ─────────────────────────────────────────────────────────────────
-    // { stmt* }
 
     fn parse_block(&mut self) -> Result<Vec<Stmt>, ParseError> {
-        let (line, _) = self.peek_pos();
         self.expect(&Token::LBrace)?;
         let mut stmts = Vec::new();
         while !matches!(self.peek(), Token::RBrace | Token::Eof) {
@@ -326,7 +336,6 @@ impl Parser {
         self.parse_assignment()
     }
 
-    // Level 1: assignment  =  +=  -=  *=  /=
     fn parse_assignment(&mut self) -> Result<Expr, ParseError> {
         let left = self.parse_or()?;
 
@@ -335,7 +344,6 @@ impl Parser {
             Token::Eq => {
                 self.advance();
                 let value = self.parse_assignment()?;
-                // Desugar compound assignment into Assign
                 if let Expr::Identifier(name) = left {
                     return Ok(Expr::Assign {
                         name,
@@ -371,7 +379,6 @@ impl Parser {
         }
     }
 
-    // Level 2: ||
     fn parse_or(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_and()?;
         while matches!(self.peek(), Token::PipePipe) {
@@ -386,7 +393,6 @@ impl Parser {
         Ok(left)
     }
 
-    // Level 3: &&
     fn parse_and(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_comparison()?;
         while matches!(self.peek(), Token::AmpAmp) {
@@ -401,7 +407,6 @@ impl Parser {
         Ok(left)
     }
 
-    // Level 4: == != < > <= >=
     fn parse_comparison(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_addition()?;
         loop {
@@ -425,7 +430,6 @@ impl Parser {
         Ok(left)
     }
 
-    // Level 5: + -
     fn parse_addition(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_multiplication()?;
         loop {
@@ -445,7 +449,6 @@ impl Parser {
         Ok(left)
     }
 
-    // Level 6: * / %
     fn parse_multiplication(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_unary()?;
         loop {
@@ -466,7 +469,6 @@ impl Parser {
         Ok(left)
     }
 
-    // Level 7: unary - !
     fn parse_unary(&mut self) -> Result<Expr, ParseError> {
         match self.peek().clone() {
             Token::Minus => {
@@ -489,7 +491,6 @@ impl Parser {
         }
     }
 
-    // Level 8: literals, identifiers, calls, grouped expressions
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         let (line, _) = self.peek_pos();
         match self.peek().clone() {
@@ -515,7 +516,6 @@ impl Parser {
             }
             Token::Identifier(name) => {
                 self.advance();
-                // Function call?
                 if matches!(self.peek(), Token::LParen) {
                     self.advance();
                     let mut args = Vec::new();
@@ -531,7 +531,6 @@ impl Parser {
                     Ok(Expr::Identifier(name))
                 }
             }
-            // 출력 is a builtin keyword but acts like a function call
             Token::출력 => {
                 self.advance();
                 self.expect(&Token::LParen)?;
@@ -613,15 +612,13 @@ mod tests {
         parse(tokens).expect("parse failed")
     }
 
-    // Test 1: simple function definition
-    // 함수 더하기(가: 정수, 나: 정수) -> 정수 { 반환 가 + 나 }
     #[test]
     fn test_parse_func_def() {
         let src = "함수 더하기(가: 정수, 나: 정수) -> 정수 { 반환 가 + 나 }";
         let prog = parse_src(src);
         assert_eq!(prog.stmts.len(), 1);
-        match &prog.stmts[0] {
-            Stmt::FuncDef {
+        match &prog.stmts[0].kind {
+            StmtKind::FuncDef {
                 name,
                 params,
                 return_type,
@@ -633,21 +630,19 @@ mod tests {
                 assert_eq!(params[1], ("나".to_string(), Type::정수));
                 assert!(matches!(return_type, Some(Type::정수)));
                 assert_eq!(body.len(), 1);
-                assert!(matches!(body[0], Stmt::Return(Some(_))));
+                assert!(matches!(body[0].kind, StmtKind::Return(Some(_))));
             }
             _ => panic!("Expected FuncDef"),
         }
     }
 
-    // Test 2: variable declaration
-    // 변수 나이 = 20
     #[test]
     fn test_parse_var_decl() {
         let src = "변수 나이 = 20";
         let prog = parse_src(src);
         assert_eq!(prog.stmts.len(), 1);
-        match &prog.stmts[0] {
-            Stmt::VarDecl {
+        match &prog.stmts[0].kind {
+            StmtKind::VarDecl {
                 name,
                 ty,
                 value,
@@ -662,15 +657,13 @@ mod tests {
         }
     }
 
-    // Test 3: if/else
-    // 만약 x > 0 { 반환 x } 아니면 { 반환 -x }
     #[test]
     fn test_parse_if_else() {
         let src = "만약 x > 0 { 반환 x } 아니면 { 반환 -x }";
         let prog = parse_src(src);
         assert_eq!(prog.stmts.len(), 1);
-        match &prog.stmts[0] {
-            Stmt::If {
+        match &prog.stmts[0].kind {
+            StmtKind::If {
                 cond,
                 then_block,
                 else_block,
@@ -690,21 +683,19 @@ mod tests {
         }
     }
 
-    // Test 4: for loop
-    // 반복 변수 i = 0; i < 10; i += 1 { 출력(i) }
     #[test]
     fn test_parse_for_loop() {
         let src = "반복 변수 i = 0; i < 10; i += 1 { 출력(i) }";
         let prog = parse_src(src);
         assert_eq!(prog.stmts.len(), 1);
-        match &prog.stmts[0] {
-            Stmt::ForLoop {
+        match &prog.stmts[0].kind {
+            StmtKind::ForLoop {
                 init,
                 cond,
-                step,
+                step: _,
                 body,
             } => {
-                assert!(matches!(init.as_ref(), Stmt::VarDecl { name, .. } if name == "i"));
+                assert!(matches!(&init.kind, StmtKind::VarDecl { name, .. } if name == "i"));
                 assert!(matches!(
                     cond,
                     Expr::BinaryOp {
@@ -718,15 +709,13 @@ mod tests {
         }
     }
 
-    // Test 5: expression precedence
-    // 3 + 5 * 2  →  BinaryOp(Add, 3, BinaryOp(Mul, 5, 2))
     #[test]
     fn test_expr_precedence() {
         let src = "3 + 5 * 2";
         let prog = parse_src(src);
         assert_eq!(prog.stmts.len(), 1);
-        match &prog.stmts[0] {
-            Stmt::ExprStmt(Expr::BinaryOp { op, left, right }) => {
+        match &prog.stmts[0].kind {
+            StmtKind::ExprStmt(Expr::BinaryOp { op, left, right }) => {
                 assert_eq!(*op, BinaryOpKind::Add);
                 assert!(matches!(left.as_ref(), Expr::IntLiteral(3)));
                 match right.as_ref() {
@@ -742,29 +731,27 @@ mod tests {
         }
     }
 
-    // Test 6: while loop
     #[test]
     fn test_parse_while_loop() {
         let src = "동안 참 { 멈춰 }";
         let prog = parse_src(src);
         assert_eq!(prog.stmts.len(), 1);
-        match &prog.stmts[0] {
-            Stmt::WhileLoop { cond, body } => {
+        match &prog.stmts[0].kind {
+            StmtKind::WhileLoop { cond, body } => {
                 assert!(matches!(cond, Expr::BoolLiteral(true)));
                 assert_eq!(body.len(), 1);
-                assert!(matches!(body[0], Stmt::Break));
+                assert!(matches!(body[0].kind, StmtKind::Break));
             }
             _ => panic!("Expected WhileLoop"),
         }
     }
 
-    // Test 7: constant declaration with type annotation
     #[test]
     fn test_parse_const_decl_with_type() {
         let src = "상수 최대값: 정수 = 100";
         let prog = parse_src(src);
-        match &prog.stmts[0] {
-            Stmt::VarDecl {
+        match &prog.stmts[0].kind {
+            StmtKind::VarDecl {
                 name,
                 ty,
                 value,
@@ -779,17 +766,49 @@ mod tests {
         }
     }
 
-    // Test 8: function call expression
     #[test]
     fn test_parse_func_call() {
         let src = "더하기(1, 2)";
         let prog = parse_src(src);
-        match &prog.stmts[0] {
-            Stmt::ExprStmt(Expr::Call { name, args }) => {
+        match &prog.stmts[0].kind {
+            StmtKind::ExprStmt(Expr::Call { name, args }) => {
                 assert_eq!(name, "더하기");
                 assert_eq!(args.len(), 2);
             }
             _ => panic!("Expected ExprStmt(Call)"),
         }
+    }
+
+    #[test]
+    fn test_parse_else_if_chain() {
+        let src = "만약 x > 10 { 출력(1) } 아니면 만약 x > 5 { 출력(2) } 아니면 { 출력(3) }";
+        let prog = parse_src(src);
+        assert_eq!(prog.stmts.len(), 1);
+        match &prog.stmts[0].kind {
+            StmtKind::If {
+                else_block: Some(else_stmts),
+                ..
+            } => {
+                assert_eq!(else_stmts.len(), 1);
+                assert!(matches!(else_stmts[0].kind, StmtKind::If { .. }));
+                if let StmtKind::If {
+                    else_block: Some(inner_else),
+                    ..
+                } = &else_stmts[0].kind
+                {
+                    assert_eq!(inner_else.len(), 1);
+                } else {
+                    panic!("Expected inner else block");
+                }
+            }
+            _ => panic!("Expected If with else-if chain"),
+        }
+    }
+
+    #[test]
+    fn test_span_tracking() {
+        let src = "변수 나이 = 20";
+        let prog = parse_src(src);
+        assert_eq!(prog.stmts[0].span.line, 1);
     }
 }
