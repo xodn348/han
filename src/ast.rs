@@ -18,11 +18,13 @@ impl Span {
 /// Han 언어 타입 시스템
 #[derive(Debug, Clone, PartialEq)]
 pub enum Type {
-    정수,   // i64
-    실수,   // f64
-    문자열, // String / i8*
-    불,     // bool / i1
-    없음,   // void
+    정수,
+    실수,
+    문자열,
+    불,
+    없음,
+    배열(Box<Type>),
+    구조체(String),
 }
 
 /// 표현식 AST 노드
@@ -48,6 +50,34 @@ pub enum Expr {
     },
     Assign {
         name: String,
+        value: Box<Expr>,
+    },
+    ArrayLiteral(Vec<Expr>),
+    Index {
+        object: Box<Expr>,
+        index: Box<Expr>,
+    },
+    IndexAssign {
+        object: Box<Expr>,
+        index: Box<Expr>,
+        value: Box<Expr>,
+    },
+    MethodCall {
+        object: Box<Expr>,
+        method: String,
+        args: Vec<Expr>,
+    },
+    FieldAccess {
+        object: Box<Expr>,
+        field: String,
+    },
+    StructLiteral {
+        name: String,
+        fields: Vec<(String, Expr)>,
+    },
+    FieldAssign {
+        object: Box<Expr>,
+        field: String,
         value: Box<Expr>,
     },
 }
@@ -131,6 +161,17 @@ pub enum StmtKind {
     Break,
     Continue,
     ExprStmt(Expr),
+    StructDef {
+        name: String,
+        #[allow(dead_code)]
+        fields: Vec<(String, Type)>,
+    },
+    TryCatch {
+        try_block: Vec<Stmt>,
+        error_name: String,
+        catch_block: Vec<Stmt>,
+    },
+    Import(String),
 }
 
 /// 프로그램 최상위 노드

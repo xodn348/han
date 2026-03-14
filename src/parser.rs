@@ -1,4 +1,3 @@
-
 use crate::ast::*;
 use crate::lexer::{Token, TokenWithPos};
 
@@ -137,6 +136,19 @@ impl Parser {
             Token::계속 => {
                 self.advance();
                 Ok(Stmt::new(StmtKind::Continue, span))
+            }
+            Token::구조 => self.parse_struct_def(),
+            Token::시도 => self.parse_try_catch(),
+            Token::가져오기 => {
+                self.advance();
+                let (line, _) = self.peek_pos();
+                match self.advance().clone() {
+                    Token::StringLiteral(path) => Ok(Stmt::new(StmtKind::Import(path), span)),
+                    tok => Err(ParseError::new(
+                        format!("가져오기 뒤에 문자열 경로 필요, '{:?}' 발견", tok),
+                        line,
+                    )),
+                }
             }
             _ => {
                 let expr = self.parse_expr()?;
@@ -344,11 +356,28 @@ impl Parser {
             Token::Eq => {
                 self.advance();
                 let value = self.parse_assignment()?;
-                if let Expr::Identifier(name) = left {
-                    return Ok(Expr::Assign {
-                        name,
-                        value: Box::new(value),
-                    });
+                match left {
+                    Expr::Identifier(name) => {
+                        return Ok(Expr::Assign {
+                            name,
+                            value: Box::new(value),
+                        });
+                    }
+                    Expr::Index { object, index } => {
+                        return Ok(Expr::IndexAssign {
+                            object,
+                            index,
+                            value: Box::new(value),
+                        });
+                    }
+                    Expr::FieldAccess { object, field } => {
+                        return Ok(Expr::FieldAssign {
+                            object,
+                            field,
+                            value: Box::new(value),
+                        });
+                    }
+                    _ => {}
                 }
                 Err(ParseError::new("할당 대상이 올바르지 않습니다", line))
             }
@@ -493,26 +522,38 @@ impl Parser {
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         let (line, _) = self.peek_pos();
-        match self.peek().clone() {
+        let mut expr = match self.peek().clone() {
             Token::IntLiteral(n) => {
                 self.advance();
-                Ok(Expr::IntLiteral(n))
+                Expr::IntLiteral(n)
             }
             Token::FloatLiteral(f) => {
                 self.advance();
-                Ok(Expr::FloatLiteral(f))
+                Expr::FloatLiteral(f)
             }
             Token::StringLiteral(s) => {
                 self.advance();
-                Ok(Expr::StringLiteral(s))
+                Expr::StringLiteral(s)
             }
             Token::참 => {
                 self.advance();
-                Ok(Expr::BoolLiteral(true))
+                Expr::BoolLiteral(true)
             }
             Token::거짓 => {
                 self.advance();
-                Ok(Expr::BoolLiteral(false))
+                Expr::BoolLiteral(false)
+            }
+            Token::LBracket => {
+                self.advance();
+                let mut elems = Vec::new();
+                while !matches!(self.peek(), Token::RBracket | Token::Eof) {
+                    elems.push(self.parse_expr()?);
+                    if matches!(self.peek(), Token::Comma) {
+                        self.advance();
+                    }
+                }
+                self.expect(&Token::RBracket)?;
+                Expr::ArrayLiteral(elems)
             }
             Token::Identifier(name) => {
                 self.advance();
@@ -526,9 +567,31 @@ impl Parser {
                         }
                     }
                     self.expect(&Token::RParen)?;
-                    Ok(Expr::Call { name, args })
+                    Expr::Call { name, args }
+                } else if matches!(self.peek(), Token::LBrace) {
+                    self.advance();
+                    let mut fields = Vec::new();
+                    while !matches!(self.peek(), Token::RBrace | Token::Eof) {
+                        let fname = match self.advance().clone() {
+                            Token::Identifier(n) => n,
+                            tok => {
+                                return Err(ParseError::new(
+                                    format!("필드 이름 예상, '{:?}' 발견", tok),
+                                    line,
+                                ))
+                            }
+                        };
+                        self.expect(&Token::Colon)?;
+                        let fval = self.parse_expr()?;
+                        fields.push((fname, fval));
+                        if matches!(self.peek(), Token::Comma) {
+                            self.advance();
+                        }
+                    }
+                    self.expect(&Token::RBrace)?;
+                    Expr::StructLiteral { name, fields }
                 } else {
-                    Ok(Expr::Identifier(name))
+                    Expr::Identifier(name)
                 }
             }
             Token::출력 => {
@@ -542,10 +605,10 @@ impl Parser {
                     }
                 }
                 self.expect(&Token::RParen)?;
-                Ok(Expr::Call {
+                Expr::Call {
                     name: "출력".to_string(),
                     args,
-                })
+                }
             }
             Token::입력 => {
                 self.advance();
@@ -558,36 +621,167 @@ impl Parser {
                     }
                 }
                 self.expect(&Token::RParen)?;
-                Ok(Expr::Call {
+                Expr::Call {
                     name: "입력".to_string(),
                     args,
-                })
+                }
             }
             Token::LParen => {
                 self.advance();
-                let expr = self.parse_expr()?;
+                let e = self.parse_expr()?;
                 self.expect(&Token::RParen)?;
-                Ok(expr)
+                e
             }
-            tok => Err(ParseError::new(
-                format!("표현식에서 예상치 못한 토큰: {:?}", tok),
-                line,
-            )),
+            tok => {
+                return Err(ParseError::new(
+                    format!("표현식에서 예상치 못한 토큰: {:?}", tok),
+                    line,
+                ))
+            }
+        };
+
+        // postfix: indexing, method call, field access
+        loop {
+            match self.peek().clone() {
+                Token::LBracket => {
+                    self.advance();
+                    let index = self.parse_expr()?;
+                    self.expect(&Token::RBracket)?;
+                    expr = Expr::Index {
+                        object: Box::new(expr),
+                        index: Box::new(index),
+                    };
+                }
+                Token::Dot => {
+                    self.advance();
+                    let member = match self.advance().clone() {
+                        Token::Identifier(n) => n,
+                        tok => {
+                            return Err(ParseError::new(
+                                format!("필드/메서드 이름 예상, '{:?}' 발견", tok),
+                                line,
+                            ))
+                        }
+                    };
+                    if matches!(self.peek(), Token::LParen) {
+                        self.advance();
+                        let mut args = Vec::new();
+                        while !matches!(self.peek(), Token::RParen | Token::Eof) {
+                            args.push(self.parse_expr()?);
+                            if matches!(self.peek(), Token::Comma) {
+                                self.advance();
+                            }
+                        }
+                        self.expect(&Token::RParen)?;
+                        expr = Expr::MethodCall {
+                            object: Box::new(expr),
+                            method: member,
+                            args,
+                        };
+                    } else {
+                        expr = Expr::FieldAccess {
+                            object: Box::new(expr),
+                            field: member,
+                        };
+                    }
+                }
+                _ => break,
+            }
         }
+
+        Ok(expr)
     }
 
     // ── Type parsing ──────────────────────────────────────────────────────────
 
     fn parse_type(&mut self) -> Result<Type, ParseError> {
         let (line, _) = self.peek_pos();
+        if matches!(self.peek(), Token::LBracket) {
+            self.advance();
+            let inner = self.parse_type()?;
+            self.expect(&Token::RBracket)?;
+            return Ok(Type::배열(Box::new(inner)));
+        }
         match self.advance().clone() {
             Token::정수타입 => Ok(Type::정수),
             Token::실수타입 => Ok(Type::실수),
             Token::문자열타입 => Ok(Type::문자열),
             Token::불타입 => Ok(Type::불),
             Token::없음타입 => Ok(Type::없음),
+            Token::Identifier(name) => Ok(Type::구조체(name)),
             tok => Err(ParseError::new(
                 format!("타입 예상 (정수/실수/문자열/불/없음), '{:?}' 발견", tok),
+                line,
+            )),
+        }
+    }
+
+    fn parse_struct_def(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.span_here();
+        self.advance();
+        let name = match self.advance().clone() {
+            Token::Identifier(n) => n,
+            tok => {
+                return Err(ParseError::new(
+                    format!("구조체 이름 예상, '{:?}' 발견", tok),
+                    span.line,
+                ))
+            }
+        };
+        self.expect(&Token::LBrace)?;
+        let mut fields = Vec::new();
+        while !matches!(self.peek(), Token::RBrace | Token::Eof) {
+            let fname = match self.advance().clone() {
+                Token::Identifier(n) => n,
+                tok => {
+                    return Err(ParseError::new(
+                        format!("필드 이름 예상, '{:?}' 발견", tok),
+                        span.line,
+                    ))
+                }
+            };
+            self.expect(&Token::Colon)?;
+            let ftype = self.parse_type()?;
+            fields.push((fname, ftype));
+            if matches!(self.peek(), Token::Comma) {
+                self.advance();
+            }
+        }
+        self.expect(&Token::RBrace)?;
+        Ok(Stmt::new(StmtKind::StructDef { name, fields }, span))
+    }
+
+    fn parse_try_catch(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.span_here();
+        self.advance();
+        let try_block = self.parse_block()?;
+        let (line, _) = self.peek_pos();
+        match self.peek().clone() {
+            Token::실패 => {
+                self.advance();
+                self.expect(&Token::LParen)?;
+                let error_name = match self.advance().clone() {
+                    Token::Identifier(n) => n,
+                    tok => {
+                        return Err(ParseError::new(
+                            format!("에러 변수 이름 예상, '{:?}' 발견", tok),
+                            line,
+                        ))
+                    }
+                };
+                self.expect(&Token::RParen)?;
+                let catch_block = self.parse_block()?;
+                Ok(Stmt::new(
+                    StmtKind::TryCatch {
+                        try_block,
+                        error_name,
+                        catch_block,
+                    },
+                    span,
+                ))
+            }
+            tok => Err(ParseError::new(
+                format!("'실패' 예상, '{:?}' 발견", tok),
                 line,
             )),
         }

@@ -1,4 +1,3 @@
-
 use crate::ast::{BinaryOpKind, Expr, Program, Stmt, StmtKind, Type, UnaryOpKind};
 use std::collections::HashMap;
 
@@ -71,6 +70,8 @@ impl CodeGen {
             Type::문자열 => "i8*",
             Type::불 => "i1",
             Type::없음 => "void",
+            Type::배열(_) => "i8*",
+            Type::구조체(_) => "i8*",
         }
     }
 
@@ -225,6 +226,17 @@ impl CodeGen {
                     .collect::<Vec<_>>()
                     .join(", ");
                 self.emit(&format!("  {} = call {} @{}({})", t, ret_ty, name, arg_str));
+                t
+            }
+            Expr::ArrayLiteral(_)
+            | Expr::Index { .. }
+            | Expr::IndexAssign { .. }
+            | Expr::MethodCall { .. }
+            | Expr::FieldAccess { .. }
+            | Expr::FieldAssign { .. }
+            | Expr::StructLiteral { .. } => {
+                let t = self.fresh_temp();
+                self.emit(&format!("  {} = add nsw i64 0, 0", t));
                 t
             }
         }
@@ -461,6 +473,20 @@ impl CodeGen {
                 }
             }
             StmtKind::FuncDef { .. } => {}
+            StmtKind::StructDef { .. } => {}
+            StmtKind::TryCatch {
+                try_block,
+                catch_block,
+                ..
+            } => {
+                for s in try_block {
+                    self.gen_stmt(s);
+                }
+                for s in catch_block {
+                    self.gen_stmt(s);
+                }
+            }
+            StmtKind::Import(_) => {}
         }
     }
 

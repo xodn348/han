@@ -18,6 +18,10 @@ pub enum Token {
     없음,
     출력,
     입력,
+    구조,
+    시도,
+    실패,
+    가져오기,
     // 타입 키워드
     정수타입,
     실수타입,
@@ -61,10 +65,13 @@ pub enum Token {
     Comma,     // ,
     Semicolon, // ;
     // 괄호
-    LBrace, // {
-    RBrace, // }
-    LParen, // (
-    RParen, // )
+    LBrace,   // {
+    RBrace,   // }
+    LParen,   // (
+    RParen,   // )
+    LBracket, // [
+    RBracket, // ]
+    Dot,      // .
     // 특수
     Newline,
     Eof,
@@ -101,6 +108,10 @@ pub fn get_keyword_map() -> HashMap<String, Token> {
     map.insert("없음".to_string(), Token::없음);
     map.insert("출력".to_string(), Token::출력);
     map.insert("입력".to_string(), Token::입력);
+    map.insert("구조".to_string(), Token::구조);
+    map.insert("시도".to_string(), Token::시도);
+    map.insert("실패".to_string(), Token::실패);
+    map.insert("가져오기".to_string(), Token::가져오기);
     // 타입 키워드
     map.insert("정수".to_string(), Token::정수타입);
     map.insert("실수".to_string(), Token::실수타입);
@@ -369,6 +380,9 @@ impl Lexer {
             '}' => Token::RBrace,
             '(' => Token::LParen,
             ')' => Token::RParen,
+            '[' => Token::LBracket,
+            ']' => Token::RBracket,
+            '.' => Token::Dot,
 
             c if is_identifier_start(c) => self.read_identifier(c),
 
