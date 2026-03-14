@@ -25,6 +25,7 @@ pub enum Type {
     없음,
     배열(Box<Type>),
     구조체(String),
+    함수타입,
 }
 
 /// 표현식 AST 노드
@@ -34,6 +35,7 @@ pub enum Expr {
     FloatLiteral(f64),
     StringLiteral(String),
     BoolLiteral(bool),
+    NullLiteral,
     Identifier(String),
     BinaryOp {
         op: BinaryOpKind,

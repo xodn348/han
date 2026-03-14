@@ -559,6 +559,10 @@ impl Parser {
                 self.advance();
                 Expr::BoolLiteral(false)
             }
+            Token::없음 => {
+                self.advance();
+                Expr::NullLiteral
+            }
             Token::LBracket => {
                 self.advance();
                 let mut elems = Vec::new();
@@ -753,6 +757,7 @@ impl Parser {
             Token::문자열타입 => Ok(Type::문자열),
             Token::불타입 => Ok(Type::불),
             Token::없음타입 => Ok(Type::없음),
+            Token::함수 => Ok(Type::함수타입),
             Token::Identifier(name) => Ok(Type::구조체(name)),
             tok => Err(ParseError::new(
                 format!("타입 예상 (정수/실수/문자열/불/없음), '{:?}' 발견", tok),

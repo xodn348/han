@@ -72,6 +72,7 @@ impl CodeGen {
             Type::없음 => "void",
             Type::배열(_) => "i8*",
             Type::구조체(_) => "i8*",
+            Type::함수타입 => "i8*",
         }
     }
 
@@ -81,6 +82,7 @@ impl CodeGen {
             Expr::FloatLiteral(_) => "double",
             Expr::StringLiteral(_) => "i8*",
             Expr::BoolLiteral(_) => "i1",
+            Expr::NullLiteral => "i64",
             Expr::BinaryOp { op, left, .. } => match op {
                 BinaryOpKind::Eq
                 | BinaryOpKind::NotEq
@@ -123,6 +125,11 @@ impl CodeGen {
                 let t = self.fresh_temp();
                 let v = if *b { 1 } else { 0 };
                 self.emit(&format!("  {} = add i1 0, {}", t, v));
+                t
+            }
+            Expr::NullLiteral => {
+                let t = self.fresh_temp();
+                self.emit(&format!("  {} = add nsw i64 0, 0", t));
                 t
             }
             Expr::StringLiteral(s) => {

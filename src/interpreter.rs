@@ -159,6 +159,7 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
         Expr::FloatLiteral(f) => Ok(Value::Float(*f)),
         Expr::StringLiteral(s) => Ok(Value::Str(s.clone())),
         Expr::BoolLiteral(b) => Ok(Value::Bool(*b)),
+        Expr::NullLiteral => Ok(Value::Void),
 
         Expr::Identifier(name) => env
             .get(name)
@@ -803,17 +804,23 @@ fn eval_binary_op(
         BinaryOpKind::Add => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a + b)),
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a + b)),
+            (Value::Int(a), Value::Float(b)) => Ok(Value::Float(a as f64 + b)),
+            (Value::Float(a), Value::Int(b)) => Ok(Value::Float(a + b as f64)),
             (Value::Str(a), Value::Str(b)) => Ok(Value::Str(a + &b)),
             _ => Err(RuntimeError::new("+ 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Sub => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a - b)),
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a - b)),
+            (Value::Int(a), Value::Float(b)) => Ok(Value::Float(a as f64 - b)),
+            (Value::Float(a), Value::Int(b)) => Ok(Value::Float(a - b as f64)),
             _ => Err(RuntimeError::new("- 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Mul => match (lv, rv) {
             (Value::Int(a), Value::Int(b)) => Ok(Value::Int(a * b)),
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a * b)),
+            (Value::Int(a), Value::Float(b)) => Ok(Value::Float(a as f64 * b)),
+            (Value::Float(a), Value::Int(b)) => Ok(Value::Float(a * b as f64)),
             _ => Err(RuntimeError::new("* 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Div => match (lv, rv) {
@@ -825,6 +832,8 @@ fn eval_binary_op(
                 }
             }
             (Value::Float(a), Value::Float(b)) => Ok(Value::Float(a / b)),
+            (Value::Int(a), Value::Float(b)) => Ok(Value::Float(a as f64 / b)),
+            (Value::Float(a), Value::Int(b)) => Ok(Value::Float(a / b as f64)),
             _ => Err(RuntimeError::new("/ 연산: 타입 불일치", line)),
         },
         BinaryOpKind::Mod => match (lv, rv) {

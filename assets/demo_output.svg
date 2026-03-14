@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.0//EN" "http://www.w3.org/TR/2001/REC-SVG-20010904/DTD/svg10.dtd">
+<svg width="499.64" height="594.29" xmlns="http://www.w3.org/2000/svg">
+<rect width="459.64" height="554.29" fill="#282a36" x="20.00px" y="20.00px"/>
+<g font-family="Apple SD Gothic Neo" font-size="15.00px" fill="#f8f8f2" clip-path="url(#terminalMask)">
+<text x="40.00px" y="73.00px" xml:space="preserve">$ cat examples/할일목록.hgl
+</text><text x="40.00px" y="91.00px" xml:space="preserve">
+</text><text x="40.00px" y="109.00px" xml:space="preserve">구조 할일 {
+</text><text x="40.00px" y="127.00px" xml:space="preserve">    제목: 문자열,
+</text><text x="40.00px" y="145.00px" xml:space="preserve">    완료: 불
+</text><text x="40.00px" y="163.00px" xml:space="preserve">}
+</text><text x="40.00px" y="181.00px" xml:space="preserve">
+</text><text x="40.00px" y="199.00px" xml:space="preserve">변수 목록 = []
+</text><text x="40.00px" y="217.00px" xml:space="preserve">
+</text><text x="40.00px" y="235.00px" xml:space="preserve">함수 추가하기(목록, 제목) {
+</text><text x="40.00px" y="253.00px" xml:space="preserve">    목록.추가(할일 { 제목: 제목, 완료: 거짓 })
+</text><text x="40.00px" y="271.00px" xml:space="preserve">}
+</text><text x="40.00px" y="289.00px" xml:space="preserve">
+</text><text x="40.00px" y="307.00px" xml:space="preserve">추가하기(목록, &quot;한글 언어 만들기&quot;)
+</text><text x="40.00px" y="325.00px" xml:space="preserve">추가하기(목록, &quot;README 작성하기&quot;)
+</text><text x="40.00px" y="343.00px" xml:space="preserve">추가하기(목록, &quot;HN에 올리기&quot;)
+</text><text x="40.00px" y="361.00px" xml:space="preserve">
+</text><text x="40.00px" y="379.00px" xml:space="preserve">목록[0].완료 = 참
+</text><text x="40.00px" y="397.00px" xml:space="preserve">목록[1].완료 = 참
+</text><text x="40.00px" y="415.00px" xml:space="preserve">
+</text><text x="40.00px" y="433.00px" xml:space="preserve">출력(&quot;=== 할일 목록 ===&quot;)
+</text><text x="40.00px" y="451.00px" xml:space="preserve">
+</text><text x="40.00px" y="469.00px" xml:space="preserve">$ hgl interpret examples/할일목록.hgl
+</text><text x="40.00px" y="487.00px" xml:space="preserve">=== 할일 목록 ===
+</text><text x="40.00px" y="505.00px" xml:space="preserve">[✓] 1. 한글 언어 만들기
+</text><text x="40.00px" y="523.00px" xml:space="preserve">[✓] 2. README 작성하기
+</text><text x="40.00px" y="541.00px" xml:space="preserve">[ ] 3. HN에 올리기
+</text>
+</g>
+<svg x="20.00px" y="20.00px"><circle cx="13.50" cy="12.00" r="5.50" fill="#FF5A54"/><circle cx="32.50" cy="12.00" r="5.50" fill="#E6BF29"/><circle cx="51.50" cy="12.00" r="5.50" fill="#52C12B"/></svg></svg>
