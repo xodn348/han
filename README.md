@@ -31,16 +31,10 @@ Han was born from the idea that programming doesn't have to look the same in eve
 
 ## Quick Start
 
-### Hello World
-
 Create `hello.hgl`:
 
 ```
-함수 main() {
-    출력("안녕하세요, 세계!")
-}
-
-main()
+출력("안녕하세요, 세계!")
 ```
 
 Run it:
@@ -50,24 +44,13 @@ hgl interpret hello.hgl
 # Output: 안녕하세요, 세계!
 ```
 
-### Fibonacci
+Or jump into the REPL:
 
+```bash
+hgl repl
+한> 출력("안녕!")
+안녕!
 ```
-함수 피보나치(n: 정수) -> 정수 {
-    만약 n <= 1 {
-        반환 n
-    }
-    반환 피보나치(n - 1) + 피보나치(n - 2)
-}
-
-함수 main() {
-    출력(피보나치(10))
-}
-
-main()
-```
-
-Output: `55`
 
 ---
 
@@ -76,21 +59,17 @@ Output: `55`
 ### Prerequisites
 
 - [Rust](https://rustup.rs) (1.70+)
-- clang (for compilation mode) — `xcode-select --install` or `brew install llvm`
+- clang (for `hgl build` / `hgl run`) — `xcode-select --install` or `brew install llvm`
 
-### Build from Source
+### Install
 
 ```bash
 git clone https://github.com/xodn348/han.git
 cd han
-cargo build --release
+cargo install --path .
 ```
 
-The binary is at `./target/release/hgl`. To install system-wide:
-
-```bash
-cp ./target/release/hgl /usr/local/bin/hgl
-```
+That's it. `hgl` is now available globally.
 
 ---
 
