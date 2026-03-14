@@ -329,6 +329,8 @@ Hangul (한글) is not just a writing system — it is a feat of deliberate ling
 
 Han brings this elegance into programming. When you write `함수 피보나치(n: 정수) -> 정수`, you are not just defining a function — you are writing in a script that was purpose-built for clarity and beauty.
 
+Hangul is also surprisingly easy to learn — [you can learn the whole system in an afternoon](https://korean.stackexchange.com/a/213).
+
 </details>
 
 <details>
