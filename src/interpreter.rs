@@ -287,8 +287,8 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                     }
 
                     let mut func_env = Environment::new();
-                    for (fname, fval) in env.collect_functions() {
-                        func_env.set(fname, fval);
+                    for (k, v) in env.snapshot() {
+                        func_env.set(k, v);
                     }
                     for ((param_name, _ty), val) in params.iter().zip(arg_vals) {
                         func_env.set(param_name.clone(), val);
