@@ -25,6 +25,7 @@ pub enum Value {
         name: String,
         fields: Rc<RefCell<HashMap<String, Value>>>,
     },
+    Tuple(Vec<Value>),
 }
 
 impl std::fmt::Display for Value {
@@ -41,6 +42,10 @@ impl std::fmt::Display for Value {
                 let arr = arr.borrow();
                 let items: Vec<String> = arr.iter().map(|v| v.to_string()).collect();
                 write!(f, "[{}]", items.join(", "))
+            }
+            Value::Tuple(vals) => {
+                let items: Vec<String> = vals.iter().map(|v| v.to_string()).collect();
+                write!(f, "({})", items.join(", "))
             }
             Value::Struct { name, fields } => {
                 let fields = fields.borrow();
@@ -434,6 +439,31 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
             };
             let vals: Vec<Value> = (s..e).map(Value::Int).collect();
             Ok(Value::Array(Rc::new(RefCell::new(vals))))
+        }
+
+        Expr::TupleLiteral(elems) => {
+            let mut vals = Vec::new();
+            for e in elems {
+                vals.push(eval_expr(e, env, line)?);
+            }
+            Ok(Value::Tuple(vals))
+        }
+
+        Expr::TupleIndex { object, index } => {
+            let obj = eval_expr(object, env, line)?;
+            match obj {
+                Value::Tuple(vals) => {
+                    if *index >= vals.len() {
+                        Err(RuntimeError::new(
+                            format!("튜플 인덱스 범위 초과: {} (길이 {})", index, vals.len()),
+                            line,
+                        ))
+                    } else {
+                        Ok(vals[*index].clone())
+                    }
+                }
+                _ => Err(RuntimeError::new("튜플 인덱싱: 튜플 타입 필요", line)),
+            }
         }
     }
 }

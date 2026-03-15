@@ -245,16 +245,21 @@ hgl lsp                     Start LSP server (hover + completion)
 ### ✅ Fully Working
 
 **Data types**
-- Integers (`정수`), floats (`실수`), strings (`문자열`), booleans (`불`)
+- Integers (`정수`), floats (`실수`), strings (`문자열`), booleans (`불`), `없음` (null)
 - Arrays with negative indexing — `arr[-1]` returns the last element
 - Structs with field access and mutation — `사람.이름 = "홍길동"`
+- Tuples — `(1, "hello", 참)`, access with `.0`, `.1`
+- Enums — `열거 방향 { 위, 아래 }`, access with `방향::위`
+- Float/Int auto-coercion — `1 + 1.5 = 2.5`
 
 **Control flow**
 - `만약` / `아니면 만약` / `아니면` (if / else-if / else)
 - `반복` for-loop with init, condition, step
+- `반복 x 안에서 배열` for-in loop — iterates arrays, strings, ranges
 - `동안` while-loop
 - `멈춰` (break), `계속` (continue)
 - `맞춰` pattern matching — integer, string, bool, wildcard `_`, binding
+- Range operator — `0..10` creates `[0, 1, 2, ..., 9]`
 
 **Functions**
 - Named functions with typed parameters and return types
@@ -306,12 +311,8 @@ hgl lsp                     Start LSP server (hover + completion)
 
 | Feature | Status |
 |---------|--------|
-| Functions as typed parameters | Syntax not yet supported — `f: 함수` fails. Pass closures without type annotation. |
-| `없음` as a literal value | Cannot write `변수 x = 없음` yet — parser doesn't handle `없음` as expression |
-| Float + Int mixed arithmetic | No implicit coercion — `1 + 1.5` fails. Use `실수변환(1) + 1.5` |
-| Nested struct field mutation | `a.b.c = v` not supported — only one level deep |
-| Closures in `맞춰` arm | Works, but arm body must use `{ }` block syntax |
-| `hgl build` with arrays/structs | Codegen stubs for arrays/structs — interpreter only for those features |
+| `hgl build` with closures/methods | Codegen stubs — interpreter only for closures and method calls |
+| `hgl build` with string methods | Codegen stubs — interpreter only |
 
 ---
 
@@ -319,8 +320,6 @@ hgl lsp                     Start LSP server (hover + completion)
 
 | Feature | Notes |
 |---------|-------|
-| Multi-return / tuples | No tuple type yet |
-| Enums | No `열거` keyword yet |
 | Null safety / Option type | No `없음?` or Option<T> |
 | Async / concurrency | Single-threaded only |
 | Standard library: network, process | No HTTP, no subprocess |

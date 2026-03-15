@@ -272,7 +272,9 @@ impl Parser {
     fn parse_if_stmt(&mut self) -> Result<Stmt, ParseError> {
         let span = self.span_here();
         self.advance();
+        self.no_struct_literal = true;
         let cond = self.parse_expr()?;
+        self.no_struct_literal = false;
         let then_block = self.parse_block()?;
 
         let else_block = if matches!(self.peek(), Token::아니면) {
@@ -364,7 +366,9 @@ impl Parser {
     fn parse_while_loop(&mut self) -> Result<Stmt, ParseError> {
         let span = self.span_here();
         self.advance();
+        self.no_struct_literal = true;
         let cond = self.parse_expr()?;
+        self.no_struct_literal = false;
         let body = self.parse_block()?;
         Ok(Stmt::new(StmtKind::WhileLoop { cond, body }, span))
     }
@@ -694,8 +698,21 @@ impl Parser {
             Token::LParen => {
                 self.advance();
                 let e = self.parse_expr()?;
-                self.expect(&Token::RParen)?;
-                e
+                if matches!(self.peek(), Token::Comma) {
+                    let mut elems = vec![e];
+                    while matches!(self.peek(), Token::Comma) {
+                        self.advance();
+                        if matches!(self.peek(), Token::RParen) {
+                            break;
+                        }
+                        elems.push(self.parse_expr()?);
+                    }
+                    self.expect(&Token::RParen)?;
+                    Expr::TupleLiteral(elems)
+                } else {
+                    self.expect(&Token::RParen)?;
+                    e
+                }
             }
             Token::함수 => {
                 self.advance();
@@ -748,6 +765,14 @@ impl Parser {
                 }
                 Token::Dot => {
                     self.advance();
+                    if let Token::IntLiteral(idx) = self.peek().clone() {
+                        self.advance();
+                        expr = Expr::TupleIndex {
+                            object: Box::new(expr),
+                            index: idx as usize,
+                        };
+                        continue;
+                    }
                     let member = match self.advance().clone() {
                         Token::Identifier(n) => n,
                         tok => {
@@ -790,6 +815,18 @@ impl Parser {
 
     fn parse_type(&mut self) -> Result<Type, ParseError> {
         let (line, _) = self.peek_pos();
+        if matches!(self.peek(), Token::LParen) {
+            self.advance();
+            let mut types = Vec::new();
+            while !matches!(self.peek(), Token::RParen | Token::Eof) {
+                types.push(self.parse_type()?);
+                if matches!(self.peek(), Token::Comma) {
+                    self.advance();
+                }
+            }
+            self.expect(&Token::RParen)?;
+            return Ok(Type::튜플(types));
+        }
         if matches!(self.peek(), Token::LBracket) {
             self.advance();
             let inner = self.parse_type()?;
