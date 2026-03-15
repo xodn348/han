@@ -1,0 +1,423 @@
+# Han (한) Programming Language — Full Reference for AI Agents
+
+> A compiled programming language with Korean (Hangul) keywords, written in Rust.
+> File extension: .hgl
+> Run: `hgl interpret file.hgl`
+> Compile: `hgl build file.hgl`
+> REPL: `hgl repl`
+
+---
+
+## KEYWORDS
+
+| Korean | English | Usage |
+|--------|---------|-------|
+| 함수 | function | `함수 이름(매개변수: 타입) -> 반환타입 { }` |
+| 반환 | return | `반환 값` |
+| 변수 | let (mutable) | `변수 이름 = 값` |
+| 상수 | const | `상수 이름 = 값` |
+| 만약 | if | `만약 조건 { }` |
+| 아니면 | else | `아니면 { }` or `아니면 만약 조건 { }` |
+| 반복 | for | `반복 변수 i = 0; i < n; i += 1 { }` |
+| 동안 | while | `동안 조건 { }` |
+| 안에서 | in (for-in) | `반복 x 안에서 배열 { }` |
+| 멈춰 | break | `멈춰` |
+| 계속 | continue | `계속` |
+| 구조 | struct | `구조 이름 { 필드: 타입 }` |
+| 구현 | impl | `구현 구조체 { 함수 메서드(자신: T) { } }` |
+| 열거 | enum | `열거 이름 { 변형1, 변형2 }` |
+| 시도 | try | `시도 { } 실패(오류) { }` |
+| 실패 | catch | see 시도 |
+| 맞춰 | match | `맞춰 값 { 패턴 => 결과 }` |
+| 가져오기 | import | `가져오기 "파일.hgl"` |
+| 참 | true | boolean true |
+| 거짓 | false | boolean false |
+| 없음 | null/void | null value |
+
+## TYPES
+
+| Korean | Type | Examples |
+|--------|------|----------|
+| 정수 | 64-bit integer | `42`, `-10` |
+| 실수 | 64-bit float | `3.14`, `-0.5` |
+| 문자열 | UTF-8 string | `"안녕하세요"` |
+| 불 | boolean | `참`, `거짓` |
+| 없음 | void/null | `없음` |
+| [정수] | array of int | `[1, 2, 3]` |
+| (정수, 문자열) | tuple | `(1, "hello")` |
+
+Int and Float auto-coerce: `1 + 1.5` → `2.5`
+
+## OPERATORS
+
+`+` `-` `*` `/` `%` — arithmetic
+`==` `!=` `<` `>` `<=` `>=` — comparison
+`&&` `||` `!` — logical
+`=` `+=` `-=` `*=` `/=` — assignment
+`->` — return type
+`=>` — match arm
+`..` — range (`0..10`)
+`::` — enum access (`방향::위`)
+`.` — field/method access
+
+---
+
+## SYNTAX PATTERNS WITH EXAMPLES
+
+### Variables
+```
+변수 이름 = "홍길동"
+변수 나이: 정수 = 25
+상수 파이 = 3.14
+변수 값 = 없음
+```
+
+### Functions
+```
+함수 더하기(가: 정수, 나: 정수) -> 정수 {
+    반환 가 + 나
+}
+
+함수 인사(이름: 문자열) {
+    출력(형식("안녕, {0}!", 이름))
+}
+```
+
+### If / Else-If / Else
+```
+만약 점수 >= 90 {
+    출력("A")
+} 아니면 만약 점수 >= 80 {
+    출력("B")
+} 아니면 {
+    출력("C")
+}
+```
+
+### For Loop (C-style)
+```
+반복 변수 i = 0; i < 10; i += 1 {
+    출력(i)
+}
+```
+
+### For-In Loop
+```
+반복 항목 안에서 ["사과", "배", "포도"] {
+    출력(항목)
+}
+
+반복 i 안에서 0..10 {
+    출력(i)
+}
+
+반복 글자 안에서 "한글" {
+    출력(글자)
+}
+```
+
+### While Loop
+```
+변수 n = 0
+동안 n < 5 {
+    출력(n)
+    n += 1
+}
+```
+
+### Arrays
+```
+변수 arr = [1, 2, 3, 4, 5]
+출력(arr[0])          // 1
+출력(arr[-1])         // 5 (negative indexing)
+arr[0] = 99           // mutation
+arr.추가(6)           // append
+arr.삭제(0)           // remove at index
+출력(arr.길이())      // length
+출력(arr.포함(3))     // contains → bool
+변수 정렬됨 = arr.정렬()   // sorted copy
+변수 뒤집힘 = arr.역순()   // reversed copy
+출력(arr.합치기(", "))     // join → string
+```
+
+### Structs
+```
+구조 사람 {
+    이름: 문자열,
+    나이: 정수
+}
+
+변수 홍길동 = 사람 { 이름: "홍길동", 나이: 30 }
+출력(홍길동.이름)
+홍길동.나이 = 31
+```
+
+### Impl Blocks (Methods)
+```
+구현 사람 {
+    함수 소개(자신: 사람) {
+        출력(형식("{0}, {1}세", 자신.이름, 자신.나이))
+    }
+}
+
+홍길동.소개()
+```
+
+### Enums
+```
+열거 방향 { 위, 아래, 왼쪽, 오른쪽 }
+출력(방향::위)     // 0
+출력(방향::오른쪽) // 3
+```
+
+### Tuples
+```
+변수 좌표 = (10, 20)
+출력(좌표.0)    // 10
+출력(좌표.1)    // 20
+
+함수 최소최대(arr: [정수]) -> (정수, 정수) {
+    변수 최소 = arr[0]
+    변수 최대 = arr[0]
+    반복 v 안에서 arr {
+        만약 v < 최소 { 최소 = v }
+        만약 v > 최대 { 최대 = v }
+    }
+    반환 (최소, 최대)
+}
+```
+
+### Pattern Matching
+```
+맞춰 값 {
+    1 => 출력("하나")
+    2 => 출력("둘")
+    _ => 출력("기타")
+}
+```
+
+### Closures
+```
+변수 두배 = 함수(x: 정수) { 반환 x * 2 }
+출력(두배(5))    // 10
+
+함수 적용(f: 함수, x: 정수) -> 정수 {
+    반환 f(x)
+}
+출력(적용(두배, 3))    // 6
+```
+
+### Error Handling
+```
+시도 {
+    변수 내용 = 파일읽기("없는파일.txt")
+} 실패(오류) {
+    출력(형식("에러: {0}", 오류))
+}
+```
+
+### HashMap / Dictionary
+```
+변수 점수 = 사전("수학", 95, "영어", 88)
+출력(점수["수학"])       // 95
+점수["국어"] = 100
+출력(점수.길이())        // 3
+출력(점수.키목록())      // ["수학", "영어", "국어"]
+출력(점수.값목록())      // [95, 88, 100]
+출력(점수.포함("수학"))  // 참
+점수.삭제("영어")
+```
+
+### Modules
+```
+가져오기 "수학도구.hgl"
+```
+
+### Range
+```
+변수 범위 = 0..10    // [0, 1, 2, ..., 9]
+```
+
+---
+
+## BUILTIN FUNCTIONS
+
+### I/O
+```
+출력(값)              // print to stdout (any type, multiple args)
+출력오류(값)          // print to stderr
+입력()                // read line from stdin → 문자열
+```
+
+### Math
+```
+제곱근(16.0)          // 4.0
+절댓값(-5)            // 5
+거듭제곱(2, 10)       // 1024.0
+```
+
+### Type Conversion
+```
+정수변환("42")        // 42
+정수변환(3.14)        // 3
+실수변환(42)          // 42.0
+길이("한글")          // 2
+타입(42)              // "정수"
+타입("hello")         // "문자열"
+타입([1,2])           // "배열"
+타입(사전())          // "사전"
+```
+
+### Format Strings
+```
+형식("이름: {0}, 나이: {1}", "홍길동", 30)    // positional
+형식("이름: {이름}")                           // named (from scope)
+```
+
+### File I/O
+```
+파일읽기("path")              // read file → 문자열
+파일쓰기("path", "content")   // write file
+파일추가("path", "content")   // append to file
+파일존재("path")              // file exists → 불
+```
+
+### JSON (serde_json)
+```
+제이슨_파싱("{\"키\": \"값\"}")    // JSON string → Han value
+제이슨_생성(사전("키", "값"))      // Han value → JSON string
+제이슨_예쁘게(값)                  // Han value → pretty JSON
+```
+
+### HTTP (reqwest)
+```
+HTTP_가져오기("https://api.example.com/data")           // GET → 문자열
+HTTP_보내기("https://api.example.com/data", 본문)       // POST with JSON → 문자열
+```
+
+### Regex
+```
+정규식_찾기("[0-9]+", "abc 123 def 456")          // → ["123", "456"]
+정규식_일치("^[0-9]+$", "12345")                  // → 참
+정규식_바꾸기("[0-9]+", "tel: 123-456", "***")    // → "tel: ***-***"
+```
+
+### Date & Time (chrono)
+```
+현재시간()      // "2025-03-15 12:30:45"
+현재날짜()      // "2025-03-15"
+타임스탬프()    // 1710500000 (Unix timestamp)
+```
+
+### System
+```
+실행("ls -la")           // run shell command → stdout string
+환경변수("HOME")         // env var → string or 없음
+명령인자()               // CLI args → [문자열]
+잠자기(1000)             // sleep 1 second
+```
+
+---
+
+## STRING METHODS
+
+```
+"hello".길이()                    // 5
+"a,b,c".분리(",")                // ["a", "b", "c"]
+"hello".포함("ell")              // 참
+"hello".바꾸기("l", "r")         // "herro"
+" hi ".앞뒤공백제거()             // "hi"
+"hello".대문자()                  // "HELLO"
+"HELLO".소문자()                  // "hello"
+"hello".시작("he")               // 참
+"hello".끝("lo")                 // 참
+"한글"[0]                         // "한"
+```
+
+## ARRAY METHODS
+
+```
+arr.추가(값)           // append
+arr.삭제(인덱스)       // remove at index → removed value
+arr.길이()             // length
+arr.포함(값)           // contains → bool
+arr.역순()             // reversed copy
+arr.정렬()             // sorted copy
+arr.합치기(구분자)     // join → string
+```
+
+## MAP METHODS
+
+```
+map.키목록()           // all keys → array
+map.값목록()           // all values → array
+map.길이()             // entry count
+map.포함(키)           // key exists → bool
+map.삭제(키)           // remove → removed value
+```
+
+---
+
+## COMPLETE EXAMPLE: HTTP API Client
+
+```
+시도 {
+    변수 응답 = HTTP_가져오기("https://jsonplaceholder.typicode.com/todos/1")
+    변수 할일 = 제이슨_파싱(응답)
+    출력(형식("제목: {0}", 할일["title"]))
+    출력(형식("완료: {0}", 할일["completed"]))
+} 실패(오류) {
+    출력(형식("API 오류: {0}", 오류))
+}
+```
+
+## COMPLETE EXAMPLE: Word Counter with HashMap
+
+```
+변수 텍스트 = "hello world hello han world hello"
+변수 단어들 = 텍스트.분리(" ")
+변수 빈도 = 사전()
+
+반복 단어 안에서 단어들 {
+    시도 {
+        변수 현재 = 빈도[단어]
+        빈도[단어] = 현재 + 1
+    } 실패(오류) {
+        빈도[단어] = 1
+    }
+}
+
+반복 키 안에서 빈도.키목록() {
+    출력(형식("{0}: {1}회", 키, 빈도[키]))
+}
+```
+
+## COMPLETE EXAMPLE: Todo List with Structs
+
+```
+구조 할일 {
+    제목: 문자열,
+    완료: 불
+}
+
+변수 목록 = []
+
+함수 추가하기(목록: [할일], 제목: 문자열) {
+    목록.추가(할일 { 제목: 제목, 완료: 거짓 })
+}
+
+추가하기(목록, "한글 언어 만들기")
+추가하기(목록, "README 작성하기")
+추가하기(목록, "HN에 올리기")
+
+목록[0].완료 = 참
+목록[1].완료 = 참
+
+반복 변수 i = 0; i < 목록.길이(); i += 1 {
+    변수 상태 = "[ ]"
+    만약 목록[i].완료 {
+        상태 = "[✓]"
+    }
+    출력(형식("{0} {1}. {2}", 상태, i + 1, 목록[i].제목))
+}
+```
