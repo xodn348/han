@@ -96,6 +96,8 @@ pub enum Expr {
         object: Box<Expr>,
         index: usize,
     },
+    #[allow(dead_code)]
+    MapLiteral(Vec<(Expr, Expr)>),
 }
 
 #[derive(Debug, Clone)]

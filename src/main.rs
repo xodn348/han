@@ -31,7 +31,20 @@ enum Commands {
 fn run_pipeline(source: &str) -> ast::Program {
     let tokens = lexer::tokenize(source);
     match parser::parse(tokens) {
-        Ok(program) => program,
+        Ok(program) => {
+            let type_errors = typechecker::check(&program);
+            for err in &type_errors {
+                if err.line > 0 {
+                    eprintln!("[타입 에러] {}번째 줄: {}", err.line, err.message);
+                } else {
+                    eprintln!("[타입 에러] {}", err.message);
+                }
+            }
+            if !type_errors.is_empty() {
+                process::exit(1);
+            }
+            program
+        }
         Err(e) => {
             eprintln!("[파서 에러] {}번째 줄: {}", e.line, e.message);
             process::exit(1);
