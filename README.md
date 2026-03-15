@@ -36,6 +36,14 @@ Han was born from the idea that programming doesn't have to look the same in eve
 - **Module imports** — `가져오기 "파일.hgl"`
 - **Generics syntax** — `함수 최대값<T>(a: T, b: T) -> T`
 - **Built-in math** — `제곱근`, `절댓값`, `거듭제곱`, `정수변환`, `실수변환`, `길이`
+- **HashMap** — `사전("키", 값)` with `.키목록()`, `.값목록()`, `.포함()`, `.삭제()`
+- **JSON** — `제이슨_파싱()`, `제이슨_생성()` via serde_json
+- **HTTP** — `HTTP_가져오기(url)`, `HTTP_보내기(url, body)` via reqwest
+- **Regex** — `정규식_찾기()`, `정규식_일치()`, `정규식_바꾸기()`
+- **Date/Time** — `현재시간()`, `현재날짜()`, `타임스탬프()`
+- **System** — `실행()`, `환경변수()`, `명령인자()`
+- **Type checker** — compile-time type validation
+- **18 example programs** — from hello world to HTTP API calls
 
 ---
 
@@ -305,14 +313,44 @@ hgl lsp                     Start LSP server (hover + completion)
 **Generics syntax**
 - `함수 최대값<T>(a: T, b: T) -> T` — type params are parsed and erased at runtime
 
+**HashMap/Dictionary**
+- `사전("키", 값, "키2", 값2)` — key-value store
+- Indexing: `map["키"]`, assignment: `map["키"] = 값`
+- Methods: `.키목록()`, `.값목록()`, `.길이()`, `.포함()`, `.삭제()`
+
+**JSON**
+- `제이슨_파싱(문자열)` → Han value, `제이슨_생성(값)` → JSON string
+- `제이슨_예쁘게(값)` — pretty-printed JSON
+
+**HTTP**
+- `HTTP_가져오기(url)` — GET request, `HTTP_보내기(url, body)` — POST request
+
+**Regex**
+- `정규식_찾기(패턴, 텍스트)`, `정규식_일치(패턴, 텍스트)`, `정규식_바꾸기(패턴, 텍스트, 대체)`
+
+**Date/Time**
+- `현재시간()`, `현재날짜()`, `타임스탬프()`
+
+**System**
+- `실행(명령어)` — shell command, `환경변수(이름)`, `명령인자()`, `잠자기(밀리초)`
+
+**Type introspection**
+- `타입(값)` → `"정수"`, `"문자열"`, `"배열"`, `"사전"`, etc.
+
+**Type checker**
+- `변수 x: 정수 = "hello"` → compile-time type error
+
+**Stack traces**
+- Function call chain shown on runtime errors
+
 ---
 
 ### ⚠️ Partial / Edge Cases
 
 | Feature | Status |
 |---------|--------|
-| `hgl build` with closures/methods | Codegen stubs — interpreter only for closures and method calls |
-| `hgl build` with string methods | Codegen stubs — interpreter only |
+| `hgl build` with closures/methods | Codegen stubs — interpreter only |
+| `hgl build` with string/array methods | Codegen stubs — interpreter only |
 
 ---
 
@@ -322,7 +360,6 @@ hgl lsp                     Start LSP server (hover + completion)
 |---------|-------|
 | Null safety / Option type | No `없음?` or Option<T> |
 | Async / concurrency | Single-threaded only |
-| Standard library: network, process | No HTTP, no subprocess |
 | Garbage collection | Reference counting only via `Rc<RefCell<>>` — cycles leak |
 | Tail call optimization | Deep recursion will stack overflow |
 
