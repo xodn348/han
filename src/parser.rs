@@ -157,6 +157,7 @@ impl Parser {
             }
             Token::맞춰 => self.parse_match(),
             Token::구현 => self.parse_impl_block(),
+            Token::열거 => self.parse_enum_def(),
             _ => {
                 let expr = self.parse_expr()?;
                 Ok(Stmt::new(StmtKind::ExprStmt(expr), span))
@@ -302,6 +303,28 @@ impl Parser {
     fn parse_for_loop(&mut self) -> Result<Stmt, ParseError> {
         let span = self.span_here();
         self.advance();
+
+        // for-in: 반복 변수이름 안에서 iterable { }
+        if let Token::Identifier(name) = self.peek().clone() {
+            let saved_pos = self.pos;
+            self.advance();
+            if matches!(self.peek(), Token::안에서) {
+                self.advance();
+                self.no_struct_literal = true;
+                let iterable = self.parse_expr()?;
+                self.no_struct_literal = false;
+                let body = self.parse_block()?;
+                return Ok(Stmt::new(
+                    StmtKind::ForIn {
+                        var_name: name,
+                        iterable,
+                        body,
+                    },
+                    span,
+                ));
+            }
+            self.pos = saved_pos;
+        }
 
         let init_span = self.span_here();
         let init = if matches!(self.peek(), Token::변수) {
@@ -454,6 +477,16 @@ impl Parser {
 
     fn parse_comparison(&mut self) -> Result<Expr, ParseError> {
         let mut left = self.parse_addition()?;
+
+        if matches!(self.peek(), Token::DotDot) {
+            self.advance();
+            let right = self.parse_addition()?;
+            return Ok(Expr::Range {
+                start: Box::new(left),
+                end: Box::new(right),
+            });
+        }
+
         loop {
             let op = match self.peek() {
                 Token::EqEq => BinaryOpKind::Eq,
@@ -577,7 +610,19 @@ impl Parser {
             }
             Token::Identifier(name) => {
                 self.advance();
-                if matches!(self.peek(), Token::LParen) {
+                if matches!(self.peek(), Token::ColonColon) {
+                    self.advance();
+                    let variant = match self.advance().clone() {
+                        Token::Identifier(v) => v,
+                        tok => {
+                            return Err(ParseError::new(
+                                format!("열거형 변형 이름 예상, '{:?}' 발견", tok),
+                                line,
+                            ))
+                        }
+                    };
+                    Expr::Identifier(format!("{}::{}", name, variant))
+                } else if matches!(self.peek(), Token::LParen) {
                     self.advance();
                     let mut args = Vec::new();
                     while !matches!(self.peek(), Token::RParen | Token::Eof) {
@@ -942,6 +987,38 @@ impl Parser {
             },
             span,
         ))
+    }
+
+    fn parse_enum_def(&mut self) -> Result<Stmt, ParseError> {
+        let span = self.span_here();
+        self.advance();
+        let name = match self.advance().clone() {
+            Token::Identifier(n) => n,
+            tok => {
+                return Err(ParseError::new(
+                    format!("열거형 이름 예상, '{:?}' 발견", tok),
+                    span.line,
+                ))
+            }
+        };
+        self.expect(&Token::LBrace)?;
+        let mut variants = Vec::new();
+        while !matches!(self.peek(), Token::RBrace | Token::Eof) {
+            match self.advance().clone() {
+                Token::Identifier(v) => variants.push(v),
+                tok => {
+                    return Err(ParseError::new(
+                        format!("열거형 변형 이름 예상, '{:?}' 발견", tok),
+                        span.line,
+                    ))
+                }
+            }
+            if matches!(self.peek(), Token::Comma) {
+                self.advance();
+            }
+        }
+        self.expect(&Token::RBrace)?;
+        Ok(Stmt::new(StmtKind::EnumDef { name, variants }, span))
     }
 }
 

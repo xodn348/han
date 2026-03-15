@@ -345,7 +345,7 @@ impl CodeGen {
                 val
             }
 
-            Expr::MethodCall { .. } | Expr::Lambda { .. } => {
+            Expr::Range { .. } | Expr::MethodCall { .. } | Expr::Lambda { .. } => {
                 let t = self.fresh_temp();
                 self.emit(&format!("  {} = add nsw i64 0, 0", t));
                 t
@@ -669,6 +669,13 @@ impl CodeGen {
                 self.emit(&format!("{}:", end_lbl));
             }
             StmtKind::ImplBlock { .. } => {}
+            StmtKind::EnumDef { .. } => {}
+            StmtKind::ForIn { iterable, body, .. } => {
+                self.gen_expr(iterable);
+                for s in body {
+                    self.gen_stmt(s);
+                }
+            }
         }
     }
 

@@ -422,6 +422,19 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                 captured,
             })
         }
+
+        Expr::Range { start, end } => {
+            let s = match eval_expr(start, env, line)? {
+                Value::Int(n) => n,
+                _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
+            };
+            let e = match eval_expr(end, env, line)? {
+                Value::Int(n) => n,
+                _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
+            };
+            let vals: Vec<Value> = (s..e).map(Value::Int).collect();
+            Ok(Value::Array(Rc::new(RefCell::new(vals))))
+        }
     }
 }
 
@@ -1053,6 +1066,53 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
                 }
             }
             Ok(None)
+        }
+
+        StmtKind::EnumDef { name, variants } => {
+            for (i, variant) in variants.iter().enumerate() {
+                let key = format!("{}::{}", name, variant);
+                env.set(key, Value::Int(i as i64));
+            }
+            Ok(None)
+        }
+
+        StmtKind::ForIn {
+            var_name,
+            iterable,
+            body,
+        } => {
+            let iter_val = eval_expr(iterable, env, line)?;
+            match iter_val {
+                Value::Array(arr) => {
+                    let items = arr.borrow().clone();
+                    for item in items {
+                        env.set(var_name.clone(), item);
+                        match eval_block(body, env)? {
+                            Some(Signal::Break) => break,
+                            Some(Signal::Continue) => continue,
+                            Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
+                            None => {}
+                        }
+                    }
+                    Ok(None)
+                }
+                Value::Str(s) => {
+                    for ch in s.chars() {
+                        env.set(var_name.clone(), Value::Str(ch.to_string()));
+                        match eval_block(body, env)? {
+                            Some(Signal::Break) => break,
+                            Some(Signal::Continue) => continue,
+                            Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
+                            None => {}
+                        }
+                    }
+                    Ok(None)
+                }
+                _ => Err(RuntimeError::new(
+                    "반복 안에서: 배열 또는 문자열 필요",
+                    line,
+                )),
+            }
         }
     }
 }

@@ -23,6 +23,9 @@ pub enum Token {
     실패,
     가져오기,
     맞춰,
+    열거,
+    안에서,
+    DotDot,     // ..
     화살표이중, // =>
     구현,
     // 타입 키워드
@@ -64,9 +67,10 @@ pub enum Token {
     // 화살표
     Arrow, // ->
     // 구분자
-    Colon,     // :
-    Comma,     // ,
-    Semicolon, // ;
+    Colon,      // :
+    ColonColon, // ::
+    Comma,      // ,
+    Semicolon,  // ;
     // 괄호
     LBrace,   // {
     RBrace,   // }
@@ -117,6 +121,8 @@ pub fn get_keyword_map() -> HashMap<String, Token> {
     map.insert("가져오기".to_string(), Token::가져오기);
     map.insert("맞춰".to_string(), Token::맞춰);
     map.insert("구현".to_string(), Token::구현);
+    map.insert("열거".to_string(), Token::열거);
+    map.insert("안에서".to_string(), Token::안에서);
     // 타입 키워드
     map.insert("정수".to_string(), Token::정수타입);
     map.insert("실수".to_string(), Token::실수타입);
@@ -381,7 +387,14 @@ impl Lexer {
                     return None;
                 }
             }
-            ':' => Token::Colon,
+            ':' => {
+                if self.peek() == Some(':') {
+                    self.advance();
+                    Token::ColonColon
+                } else {
+                    Token::Colon
+                }
+            }
             ',' => Token::Comma,
             ';' => Token::Semicolon,
             '{' => Token::LBrace,
@@ -390,7 +403,14 @@ impl Lexer {
             ')' => Token::RParen,
             '[' => Token::LBracket,
             ']' => Token::RBracket,
-            '.' => Token::Dot,
+            '.' => {
+                if self.peek() == Some('.') {
+                    self.advance();
+                    Token::DotDot
+                } else {
+                    Token::Dot
+                }
+            }
 
             c if is_identifier_start(c) => self.read_identifier(c),
 
