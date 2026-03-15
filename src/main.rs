@@ -96,20 +96,20 @@ fn print_banner() {
     let dim = "\x1b[2m";
     let reset = "\x1b[0m";
 
-    // ㅎ (top) + ㅏ (right) + ㄴ (bottom) = 한
-    println!("{cyan}{bold}");
-    println!("       ██████████");
-    println!("      ██        ██       ██");
-    println!("       ████████         ██");
-    println!("      ██        ██      ██");
-    println!("       ██████████   ████████");
-    println!("                        ██");
-    println!("      ██                ██");
-    println!("      ██");
-    println!("      ████████████████████");
-    println!("{reset}");
-    println!("{dim}    한글 프로그래밍 언어 v0.1.0");
-    println!("    github.com/xodn348/han{reset}");
+    let red = "\x1b[31m";
+    let blue = "\x1b[34m";
+    let white = "\x1b[37m";
+
+    println!();
+    println!("{cyan}{bold}    ─────── ◆ ───────");
+    println!();
+    println!("     {red}◓{blue}◒{reset}{bold}{cyan}    한    {red}◓{blue}◒{reset}");
+    println!();
+    println!("{cyan}{bold}    ─────── ◆ ───────{reset}");
+    println!();
+    println!("{white}{bold}    한글 프로그래밍 언어{reset}");
+    println!("{dim}    v0.1.0 · github.com/xodn348/han{reset}");
+    println!();
     println!();
 }
 
