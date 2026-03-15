@@ -255,9 +255,12 @@ hgl lsp                     Start LSP server (hover + completion)
 **Data types**
 - Integers (`정수`), floats (`실수`), strings (`문자열`), booleans (`불`), `없음` (null)
 - Arrays with negative indexing — `arr[-1]` returns the last element
+- Nested arrays — `[[1, 2], [3, 4]]`, `중첩[1][1]` → `4`
 - Structs with field access and mutation — `사람.이름 = "홍길동"`
+- Nested structs — `직원.주소.도시 = "부산"`
 - Tuples — `(1, "hello", 참)`, access with `.0`, `.1`
 - Enums — `열거 방향 { 위, 아래 }`, access with `방향::위`
+- HashMap — `사전("키", 값)`, nested: `사전["키"]["내부키"]`
 - Float/Int auto-coercion — `1 + 1.5 = 2.5`
 
 **Control flow**
@@ -273,17 +276,25 @@ hgl lsp                     Start LSP server (hover + completion)
 - Named functions with typed parameters and return types
 - Recursion (fibonacci, factorial, etc.)
 - Closures / anonymous functions with environment capture — `변수 f = 함수(x: 정수) { 반환 x * 2 }`
-- Closures passed as arguments (without type annotation)
+- Closures passed as arguments
+- Higher-order functions — `함수 적용(f: 함수, x: 정수) -> 정수`
 
 **Strings**
 - Concatenation with `+`
 - Methods: `.분리(sep)`, `.포함(s)`, `.바꾸기(from, to)`, `.앞뒤공백제거()`, `.대문자()`, `.소문자()`, `.시작(s)`, `.끝(s)`, `.길이()`
-- Character indexing — `문자열[0]`
+- Character indexing — `문자열[0]`, negative: `문자열[-1]`
+- Method chaining — `"hello world".대문자().분리(" ")`
 
 **Arrays**
 - Methods: `.추가(v)`, `.삭제(i)`, `.길이()`, `.포함(v)`, `.역순()`, `.정렬()`, `.합치기(sep)`
 - Index read/write — `arr[i]`, `arr[i] = v`
 - Negative indexing — `arr[-1]`
+
+**HashMap / Dictionary**
+- Create: `사전("키", 값, "키2", 값2)` or `사전()`
+- Index: `map["키"]`, assign: `map["키"] = 값`
+- Methods: `.키목록()`, `.값목록()`, `.길이()`, `.포함(키)`, `.삭제(키)`
+- Nested maps — `사전("a", 사전("b", 1))`
 
 **Structs & methods**
 - Define: `구조 사람 { 이름: 문자열, 나이: 정수 }`
@@ -292,6 +303,28 @@ hgl lsp                     Start LSP server (hover + completion)
 
 **Error handling**
 - `시도 { } 실패(오류) { }` — catches any runtime error including division by zero, file not found, out-of-bounds
+- Stack traces on function call errors
+
+**Type safety**
+- Compile-time type checker — `변수 x: 정수 = "hello"` → error
+- Return type validation — wrong return type detected before execution
+
+**JSON** (serde_json)
+- `제이슨_파싱(문자열)` → Han value, `제이슨_생성(값)` → JSON string
+- Roundtrip: Han → JSON → Han preserves structure
+
+**HTTP** (reqwest)
+- `HTTP_가져오기(url)` — GET, `HTTP_보내기(url, body)` — POST with JSON
+
+**Regex**
+- `정규식_찾기(패턴, 텍스트)`, `정규식_일치()`, `정규식_바꾸기()`
+
+**Date/Time** (chrono)
+- `현재시간()`, `현재날짜()`, `타임스탬프()`
+
+**System**
+- `실행(명령어)` — shell command, `환경변수()`, `명령인자()`, `잠자기()`
+- `타입(값)` — runtime type introspection
 
 **File I/O**
 - `파일읽기("path")` — reads whole file to string
