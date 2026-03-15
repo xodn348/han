@@ -6,6 +6,10 @@
   <img src="assets/demo.gif" alt="Han REPL demo — Korean programming in action" width="700">
 </p>
 
+<p align="center">
+  <img src="assets/demo.png" alt="Han code example — syntax highlighted" width="600">
+</p>
+
 ---
 
 ## About
