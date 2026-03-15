@@ -3,7 +3,7 @@
 > A general-purpose compiled language with Korean keywords — written in Rust
 
 <p align="center">
-  <img src="assets/demo.png" alt="Han code example — Todo list with structs" width="600">
+  <img src="assets/demo.gif" alt="Han REPL demo — Korean programming in action" width="700">
 </p>
 
 ---
