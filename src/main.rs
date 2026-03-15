@@ -91,25 +91,33 @@ fn compile_to_binary(source: &str, output_path: &str) -> Result<(), String> {
 }
 
 fn print_banner() {
-    let cyan = "\x1b[36m";
-    let bold = "\x1b[1m";
-    let dim = "\x1b[2m";
-    let reset = "\x1b[0m";
+    let c = "\x1b[36m";
+    let b = "\x1b[1m";
+    let d = "\x1b[2m";
+    let r = "\x1b[0m";
+    let red = "\x1b[91m";
+    let blu = "\x1b[94m";
+    let y = "\x1b[93m";
 
-    let red = "\x1b[31m";
-    let blue = "\x1b[34m";
-    let white = "\x1b[37m";
-
     println!();
-    println!("{cyan}{bold}    ─────── ◆ ───────");
+    println!("  {y}✿{r} {red}◓{blu}◒{r}{d} ────────────────────────────────────────────────────────── {red}◓{blu}◒{r} {y}✿{r}");
     println!();
-    println!("     {red}◓{blue}◒{reset}{bold}{cyan}    한    {red}◓{blue}◒{reset}");
+    println!("  {y}      ⢠⣦⣠⡆{r}       {c}{b}⢀⣀⣀⣀⣀⣀⡀⠀⠀⠀⠀⢠⣶⡆{r}       {y}⢠⣦⣠⡆{r}");
+    println!("  {y}      ⠸⣿⣿⡇{r}       {c}{b}⠘⠛⠛⠛⠛⠛⠃⠀⠀⠀⠀⢸⣿⡇{r}       {y}⠸⣿⣿⡇{r}");
+    println!("  {y}  ⣸⣿⣶⣤⡀⢻⡿⢁⣤⣶⣿⣇{r} {c}{b}⢰⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⡆⠀⢸⣿⡇{r} {y}⣸⣿⣶⣤⡀⢻⡿⢁⣤⣶⣿⣇{r}");
+    println!("  {y}⠈⠛⠛⠿⠿⠟⡂⢀⠻⠿⠿⠛⠛⠁{r}{c}{b}   ⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⢸⣿⡇{r} {y}⠈⠛⠛⠿⠿⠟⡂⢀⠻⠿⠿⠛⠛⠁{r}");
+    println!("  {y}    ⣠⣶⣿⡇⢸⣿⣶⣄{r}     {c}{b}⣴⣿⠟⠛⠛⠛⠻⣿⣦⠀⠀⠀⢸⣿⡿⠿⠿⠇{r} {y}    ⣠⣶⣿⡇⢸⣿⣶⣄{r}");
+    println!("  {y}  ⠼⢿⣿⡟⠀⠀⢻⣿⡿⠧{r}   {c}{b}⢸⣿⡇⠀⠀⠀⠀⠀⢸⣿⡇⠀⠀⢸⣿⡇{r}     {y}⠼⢿⣿⡟⠀⠀⢻⣿⡿⠧{r}");
+    println!("  {y}      ⠋⠀⠀⠀⠀⠙{r}       {c}{b}⠻⣿⣦⣤⣤⣤⣴⡿⠟⠀⠀⠀⢸⣿⡇{r}       {y}⠋⠀⠀⠀⠀⠙{r}");
+    println!("                       {c}{b}⢀⣈⠉⠉⠉⠁⠀⠀⠀⠀⠀⢸⣿⡇{r}");
+    println!("                       {c}{b}⢸⣿⠀{r}");
+    println!("                       {c}{b}⢸⣿⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀{r}");
+    println!("                       {c}{b}⠘⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠃{r}");
     println!();
-    println!("{cyan}{bold}    ─────── ◆ ───────{reset}");
+    println!("  {d}               한글 프로그래밍 언어 v0.1.0{r}");
+    println!("  {d}               github.com/xodn348/han{r}");
     println!();
-    println!("{white}{bold}    한글 프로그래밍 언어{reset}");
-    println!("{dim}    v0.1.0 · github.com/xodn348/han{reset}");
-    println!();
+    println!("  {y}✿{r} {red}◓{blu}◒{r}{d} ────────────────────────────────────────────────────────── {red}◓{blu}◒{r} {y}✿{r}");
     println!();
 }
 
