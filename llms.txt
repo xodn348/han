@@ -1,0 +1,25 @@
+# Han (한) Programming Language
+
+> A compiled programming language with Korean (Hangul) keywords, written in Rust
+
+Han is a statically-typed language where every keyword is in Korean. It compiles to native binaries via LLVM IR and includes a tree-walking interpreter.
+
+## Docs
+
+- [Full Documentation](https://xodn348.github.io/han/)
+- [Complete API Reference](https://xodn348.github.io/han/api/complete.html)
+- [Keyword Reference](https://xodn348.github.io/han/api/keywords.html)
+- [GitHub Repository](https://github.com/xodn348/han)
+
+## Quick Reference
+
+File extension: .hgl
+Run: hgl interpret file.hgl
+Compile: hgl build file.hgl
+REPL: hgl repl
+
+Keywords: 함수(fn) 반환(return) 변수(let) 상수(const) 만약(if) 아니면(else) 반복(for) 동안(while) 멈춰(break) 계속(continue) 구조(struct) 구현(impl) 열거(enum) 시도(try) 실패(catch) 맞춰(match) 가져오기(import) 안에서(in)
+
+Types: 정수(i64) 실수(f64) 문자열(string) 불(bool) 없음(void)
+
+Builtins: 출력(print) 입력(input) 제곱근(sqrt) 절댓값(abs) 거듭제곱(pow) 정수변환(int) 실수변환(float) 길이(len) 형식(format) 파일읽기(read_file) 파일쓰기(write_file) 파일추가(append_file) 파일존재(file_exists)

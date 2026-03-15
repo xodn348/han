@@ -1,0 +1,16 @@
+[book]
+authors = ["xodn348"]
+language = "en"
+multilingual = false
+src = "src"
+title = "Han (한) Programming Language"
+description = "Documentation for the Han programming language — Korean keywords, Rust implementation"
+
+[build]
+build-dir = "book"
+
+[output.html]
+default-theme = "navy"
+preferred-dark-theme = "navy"
+git-repository-url = "https://github.com/xodn348/han"
+edit-url-template = "https://github.com/xodn348/han/edit/main/docs/src/{path}"
