@@ -73,6 +73,7 @@ impl std::fmt::Display for Value {
 pub struct RuntimeError {
     pub message: String,
     pub line: usize,
+    pub stack_trace: Vec<String>,
 }
 
 impl RuntimeError {
@@ -80,7 +81,13 @@ impl RuntimeError {
         Self {
             message: msg.into(),
             line,
+            stack_trace: Vec::new(),
         }
+    }
+
+    pub fn with_frame(mut self, frame: String) -> Self {
+        self.stack_trace.push(frame);
+        self
     }
 }
 
@@ -236,6 +243,10 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                 return Ok(result);
             }
 
+            if let Some(result) = eval_builtin_stdlib(name, args, env, line)? {
+                return Ok(result);
+            }
+
             if name == "사전" {
                 let mut pairs = Vec::new();
                 let mut i = 0;
@@ -283,9 +294,10 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                         func_env.set(param_name.clone(), val);
                     }
 
-                    match eval_block(&body, &mut func_env)? {
-                        Some(Signal::Return(v)) => Ok(v),
-                        _ => Ok(Value::Void),
+                    match eval_block(&body, &mut func_env) {
+                        Ok(Some(Signal::Return(v))) => Ok(v),
+                        Ok(_) => Ok(Value::Void),
+                        Err(e) => Err(e.with_frame(format!("  함수 '{}' ({}번째 줄)", name, line))),
                     }
                 }
                 Value::Closure {
@@ -731,6 +743,280 @@ fn eval_method(
             format!("메서드 '{}' 호출 불가 타입", method),
             line,
         )),
+    }
+}
+
+fn json_to_value(json: &serde_json::Value) -> Value {
+    match json {
+        serde_json::Value::Null => Value::Void,
+        serde_json::Value::Bool(b) => Value::Bool(*b),
+        serde_json::Value::Number(n) => {
+            if let Some(i) = n.as_i64() {
+                Value::Int(i)
+            } else {
+                Value::Float(n.as_f64().unwrap_or(0.0))
+            }
+        }
+        serde_json::Value::String(s) => Value::Str(s.clone()),
+        serde_json::Value::Array(arr) => {
+            let vals: Vec<Value> = arr.iter().map(json_to_value).collect();
+            Value::Array(Rc::new(RefCell::new(vals)))
+        }
+        serde_json::Value::Object(map) => {
+            let pairs: Vec<(Value, Value)> = map
+                .iter()
+                .map(|(k, v)| (Value::Str(k.clone()), json_to_value(v)))
+                .collect();
+            Value::Map(Rc::new(RefCell::new(pairs)))
+        }
+    }
+}
+
+fn value_to_json(val: &Value) -> serde_json::Value {
+    match val {
+        Value::Int(n) => serde_json::Value::Number((*n).into()),
+        Value::Float(f) => serde_json::json!(*f),
+        Value::Str(s) => serde_json::Value::String(s.clone()),
+        Value::Bool(b) => serde_json::Value::Bool(*b),
+        Value::Void => serde_json::Value::Null,
+        Value::Array(arr) => {
+            let arr = arr.borrow();
+            serde_json::Value::Array(arr.iter().map(value_to_json).collect())
+        }
+        Value::Map(map) => {
+            let map = map.borrow();
+            let mut obj = serde_json::Map::new();
+            for (k, v) in map.iter() {
+                obj.insert(k.to_string(), value_to_json(v));
+            }
+            serde_json::Value::Object(obj)
+        }
+        _ => serde_json::Value::Null,
+    }
+}
+
+fn eval_builtin_stdlib(
+    name: &str,
+    args: &[Expr],
+    env: &mut Environment,
+    line: usize,
+) -> Result<Option<Value>, RuntimeError> {
+    match name {
+        "제이슨_파싱" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("제이슨_파싱: 문자열 인자 필요", line));
+            }
+            let s = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("제이슨_파싱: 문자열 필요", line)),
+            };
+            let json: serde_json::Value = serde_json::from_str(&s)
+                .map_err(|e| RuntimeError::new(format!("JSON 파싱 오류: {}", e), line))?;
+            Ok(Some(json_to_value(&json)))
+        }
+        "제이슨_생성" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("제이슨_생성: 인자 1개 필요", line));
+            }
+            let val = eval_expr(&args[0], env, line)?;
+            let json = value_to_json(&val);
+            Ok(Some(Value::Str(json.to_string())))
+        }
+        "제이슨_예쁘게" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("제이슨_예쁘게: 인자 1개 필요", line));
+            }
+            let val = eval_expr(&args[0], env, line)?;
+            let json = value_to_json(&val);
+            let pretty = serde_json::to_string_pretty(&json)
+                .map_err(|e| RuntimeError::new(format!("JSON 변환 오류: {}", e), line))?;
+            Ok(Some(Value::Str(pretty)))
+        }
+        "HTTP_가져오기" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("HTTP_가져오기: URL 인자 필요", line));
+            }
+            let url = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("HTTP_가져오기: 문자열 URL 필요", line)),
+            };
+            let body = reqwest::blocking::get(&url)
+                .map_err(|e| RuntimeError::new(format!("HTTP 오류: {}", e), line))?
+                .text()
+                .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
+            Ok(Some(Value::Str(body)))
+        }
+        "HTTP_보내기" => {
+            if args.len() < 2 {
+                return Err(RuntimeError::new("HTTP_보내기: URL, 본문 인자 필요", line));
+            }
+            let url = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("HTTP_보내기: 문자열 URL 필요", line)),
+            };
+            let body_val = eval_expr(&args[1], env, line)?;
+            let body_str = match &body_val {
+                Value::Str(s) => s.clone(),
+                _ => value_to_json(&body_val).to_string(),
+            };
+            let client = reqwest::blocking::Client::new();
+            let resp = client
+                .post(&url)
+                .header("Content-Type", "application/json")
+                .body(body_str)
+                .send()
+                .map_err(|e| RuntimeError::new(format!("HTTP POST 오류: {}", e), line))?
+                .text()
+                .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
+            Ok(Some(Value::Str(resp)))
+        }
+        "정규식_찾기" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::new(
+                    "정규식_찾기: 패턴, 텍스트 인자 필요",
+                    line,
+                ));
+            }
+            let pattern = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("정규식_찾기: 문자열 패턴 필요", line)),
+            };
+            let text = match eval_expr(&args[1], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("정규식_찾기: 문자열 텍스트 필요", line)),
+            };
+            let re = regex::Regex::new(&pattern)
+                .map_err(|e| RuntimeError::new(format!("정규식 오류: {}", e), line))?;
+            let matches: Vec<Value> = re
+                .find_iter(&text)
+                .map(|m| Value::Str(m.as_str().to_string()))
+                .collect();
+            Ok(Some(Value::Array(Rc::new(RefCell::new(matches)))))
+        }
+        "정규식_일치" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::new(
+                    "정규식_일치: 패턴, 텍스트 인자 필요",
+                    line,
+                ));
+            }
+            let pattern = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("정규식_일치: 문자열 패턴 필요", line)),
+            };
+            let text = match eval_expr(&args[1], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("정규식_일치: 문자열 텍스트 필요", line)),
+            };
+            let re = regex::Regex::new(&pattern)
+                .map_err(|e| RuntimeError::new(format!("정규식 오류: {}", e), line))?;
+            Ok(Some(Value::Bool(re.is_match(&text))))
+        }
+        "정규식_바꾸기" => {
+            if args.len() != 3 {
+                return Err(RuntimeError::new(
+                    "정규식_바꾸기: 패턴, 텍스트, 대체 인자 필요",
+                    line,
+                ));
+            }
+            let pattern = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("정규식_바꾸기: 문자열 패턴 필요", line)),
+            };
+            let text = match eval_expr(&args[1], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("정규식_바꾸기: 문자열 텍스트 필요", line)),
+            };
+            let replacement = match eval_expr(&args[2], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("정규식_바꾸기: 문자열 대체 필요", line)),
+            };
+            let re = regex::Regex::new(&pattern)
+                .map_err(|e| RuntimeError::new(format!("정규식 오류: {}", e), line))?;
+            Ok(Some(Value::Str(
+                re.replace_all(&text, replacement.as_str()).to_string(),
+            )))
+        }
+        "현재시간" => {
+            let now = chrono::Local::now();
+            Ok(Some(Value::Str(
+                now.format("%Y-%m-%d %H:%M:%S").to_string(),
+            )))
+        }
+        "현재날짜" => {
+            let now = chrono::Local::now();
+            Ok(Some(Value::Str(now.format("%Y-%m-%d").to_string())))
+        }
+        "타임스탬프" => {
+            let now = chrono::Utc::now();
+            Ok(Some(Value::Int(now.timestamp())))
+        }
+        "명령인자" => {
+            let args: Vec<Value> = std::env::args().skip(2).map(Value::Str).collect();
+            Ok(Some(Value::Array(Rc::new(RefCell::new(args)))))
+        }
+        "환경변수" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("환경변수: 변수명 인자 필요", line));
+            }
+            let var_name = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("환경변수: 문자열 필요", line)),
+            };
+            match std::env::var(&var_name) {
+                Ok(val) => Ok(Some(Value::Str(val))),
+                Err(_) => Ok(Some(Value::Void)),
+            }
+        }
+        "실행" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("실행: 명령어 문자열 필요", line));
+            }
+            let cmd = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("실행: 문자열 필요", line)),
+            };
+            let output = std::process::Command::new("sh")
+                .arg("-c")
+                .arg(&cmd)
+                .output()
+                .map_err(|e| RuntimeError::new(format!("실행 오류: {}", e), line))?;
+            Ok(Some(Value::Str(
+                String::from_utf8_lossy(&output.stdout).to_string(),
+            )))
+        }
+        "잠자기" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("잠자기: 밀리초 인자 필요", line));
+            }
+            let ms = match eval_expr(&args[0], env, line)? {
+                Value::Int(n) => n as u64,
+                _ => return Err(RuntimeError::new("잠자기: 정수 필요", line)),
+            };
+            std::thread::sleep(std::time::Duration::from_millis(ms));
+            Ok(Some(Value::Void))
+        }
+        "타입" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("타입: 인자 1개 필요", line));
+            }
+            let val = eval_expr(&args[0], env, line)?;
+            let type_name = match val {
+                Value::Int(_) => "정수",
+                Value::Float(_) => "실수",
+                Value::Str(_) => "문자열",
+                Value::Bool(_) => "불",
+                Value::Void => "없음",
+                Value::Function { .. } => "함수",
+                Value::Closure { .. } => "람다",
+                Value::Array(_) => "배열",
+                Value::Tuple(_) => "튜플",
+                Value::Map(_) => "사전",
+                Value::Struct { .. } => "구조체",
+            };
+            Ok(Some(Value::Str(type_name.to_string())))
+        }
+        _ => Ok(None),
     }
 }
 
