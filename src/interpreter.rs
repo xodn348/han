@@ -1068,7 +1068,7 @@ fn pattern_matches(pattern: &Pattern, value: &Value, env: &mut Environment) -> b
             env.set(name.clone(), val.clone());
             true
         }
-        (Pattern::ArrayPattern(pats), Value::Array(arr)) => {
+        (Pattern::Array(pats), Value::Array(arr)) => {
             let arr = arr.borrow();
             if pats.len() != arr.len() {
                 return false;

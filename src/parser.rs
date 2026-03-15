@@ -904,7 +904,7 @@ impl Parser {
                     }
                 }
                 self.expect(&Token::RBracket)?;
-                Ok(Pattern::ArrayPattern(pats))
+                Ok(Pattern::Array(pats))
             }
             tok => Err(ParseError::new(
                 format!("패턴 예상, '{:?}' 발견", tok),

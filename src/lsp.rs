@@ -175,9 +175,9 @@ fn parse_json_field<'a>(json: &'a str, field: &str) -> Option<&'a str> {
     let pos = json.find(key.as_str())?;
     let after = json[pos + key.len()..].trim_start();
     let after = after.strip_prefix(':')?.trim_start();
-    if after.starts_with('"') {
-        let end = after[1..].find('"')? + 1;
-        Some(&after[1..end])
+    if let Some(rest) = after.strip_prefix('"') {
+        let end = rest.find('"')? + 1;
+        Some(&rest[..end])
     } else {
         let end = after
             .find(|c: char| ",}]".contains(c))
@@ -193,12 +193,7 @@ pub fn run_lsp() {
     let mut writer = std::io::BufWriter::new(stdout.lock());
     let docs = keyword_docs();
 
-    loop {
-        let msg = match read_message(&mut reader) {
-            Some(m) => m,
-            None => break,
-        };
-
+    while let Some(msg) = read_message(&mut reader) {
         let method = parse_json_field(&msg, "method").unwrap_or("").to_string();
         let id_str = parse_json_field(&msg, "id").unwrap_or("null").to_string();
         let id = serde_like::parse_str(&id_str).unwrap_or(serde_like::Value::Null);

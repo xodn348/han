@@ -354,12 +354,11 @@ impl CodeGen {
     }
 
     fn find_field_index(&self, object: &Expr, field: &str) -> usize {
-        if let Expr::Identifier(name) = object {
-            if let Some(struct_name) = self.var_types.get(name.as_str()) {
-                if let Some(fields) = self.struct_defs.get(*struct_name) {
-                    return fields.iter().position(|f| f == field).unwrap_or(0);
-                }
-            }
+        if let Expr::Identifier(name) = object
+            && let Some(struct_name) = self.var_types.get(name.as_str())
+            && let Some(fields) = self.struct_defs.get(*struct_name)
+        {
+            return fields.iter().position(|f| f == field).unwrap_or(0);
         }
         0
     }

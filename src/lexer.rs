@@ -460,8 +460,8 @@ mod tests {
 
     #[test]
     fn test_float_literal() {
-        let toks = tokens("3.14");
-        assert_eq!(toks, vec![Token::FloatLiteral(3.14)]);
+        let toks = tokens("123.456");
+        assert_eq!(toks, vec![Token::FloatLiteral(123.456)]);
     }
 
     #[test]

@@ -102,7 +102,7 @@ pub enum Pattern {
     BoolLiteral(bool),
     Wildcard,
     Identifier(String),
-    ArrayPattern(Vec<Pattern>),
+    Array(Vec<Pattern>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
