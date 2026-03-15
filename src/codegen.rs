@@ -350,7 +350,8 @@ impl CodeGen {
             | Expr::MethodCall { .. }
             | Expr::Lambda { .. }
             | Expr::TupleLiteral(_)
-            | Expr::TupleIndex { .. } => {
+            | Expr::TupleIndex { .. }
+            | Expr::MapLiteral(_) => {
                 let t = self.fresh_temp();
                 self.emit(&format!("  {} = add nsw i64 0, 0", t));
                 t

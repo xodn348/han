@@ -26,6 +26,7 @@ pub enum Value {
         fields: Rc<RefCell<HashMap<String, Value>>>,
     },
     Tuple(Vec<Value>),
+    Map(Rc<RefCell<Vec<(Value, Value)>>>),
 }
 
 impl std::fmt::Display for Value {
@@ -46,6 +47,14 @@ impl std::fmt::Display for Value {
             Value::Tuple(vals) => {
                 let items: Vec<String> = vals.iter().map(|v| v.to_string()).collect();
                 write!(f, "({})", items.join(", "))
+            }
+            Value::Map(entries) => {
+                let entries = entries.borrow();
+                let items: Vec<String> = entries
+                    .iter()
+                    .map(|(k, v)| format!("{}: {}", k, v))
+                    .collect();
+                write!(f, "{{{}}}", items.join(", "))
             }
             Value::Struct { name, fields } => {
                 let fields = fields.borrow();
@@ -227,6 +236,18 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                 return Ok(result);
             }
 
+            if name == "사전" {
+                let mut pairs = Vec::new();
+                let mut i = 0;
+                while i + 1 < args.len() {
+                    let key = eval_expr(&args[i], env, line)?;
+                    let val = eval_expr(&args[i + 1], env, line)?;
+                    pairs.push((key, val));
+                    i += 2;
+                }
+                return Ok(Value::Map(Rc::new(RefCell::new(pairs))));
+            }
+
             if let Some(result) = eval_builtin_io(name, args, env, line)? {
                 return Ok(result);
             }
@@ -344,6 +365,18 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                         Ok(Value::Str(chars[i as usize].to_string()))
                     }
                 }
+                (Value::Map(map), key) => {
+                    let map = map.borrow();
+                    for (k, v) in map.iter() {
+                        if values_equal(k, &key) {
+                            return Ok(v.clone());
+                        }
+                    }
+                    Err(RuntimeError::new(
+                        format!("사전에 키가 없음: {}", key),
+                        line,
+                    ))
+                }
                 _ => Err(RuntimeError::new("인덱싱 불가 타입", line)),
             }
         }
@@ -367,7 +400,18 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                     arr[i as usize] = val.clone();
                     Ok(val)
                 }
-                _ => Err(RuntimeError::new("인덱스 할당: 배열 타입 필요", line)),
+                (Value::Map(map), key) => {
+                    let mut map = map.borrow_mut();
+                    for entry in map.iter_mut() {
+                        if values_equal(&entry.0, &key) {
+                            entry.1 = val.clone();
+                            return Ok(val);
+                        }
+                    }
+                    map.push((key, val.clone()));
+                    Ok(val)
+                }
+                _ => Err(RuntimeError::new("인덱스 할당: 배열/사전 타입 필요", line)),
             }
         }
 
@@ -464,6 +508,16 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                 }
                 _ => Err(RuntimeError::new("튜플 인덱싱: 튜플 타입 필요", line)),
             }
+        }
+
+        Expr::MapLiteral(entries) => {
+            let mut pairs = Vec::new();
+            for (k, v) in entries {
+                let key = eval_expr(k, env, line)?;
+                let val = eval_expr(v, env, line)?;
+                pairs.push((key, val));
+            }
+            Ok(Value::Map(Rc::new(RefCell::new(pairs))))
         }
     }
 }
@@ -594,6 +648,41 @@ fn eval_method(
             }
             _ => Err(RuntimeError::new(
                 format!("문자열 메서드 없음: {}", method),
+                line,
+            )),
+        },
+        Value::Map(map) => match method {
+            "키목록" => {
+                let keys: Vec<Value> = map.borrow().iter().map(|(k, _)| k.clone()).collect();
+                Ok(Value::Array(Rc::new(RefCell::new(keys))))
+            }
+            "값목록" => {
+                let vals: Vec<Value> = map.borrow().iter().map(|(_, v)| v.clone()).collect();
+                Ok(Value::Array(Rc::new(RefCell::new(vals))))
+            }
+            "길이" => Ok(Value::Int(map.borrow().len() as i64)),
+            "포함" => {
+                let key = arg_vals
+                    .first()
+                    .ok_or_else(|| RuntimeError::new("포함: 키 인자 필요", line))?;
+                let found = map.borrow().iter().any(|(k, _)| values_equal(k, key));
+                Ok(Value::Bool(found))
+            }
+            "삭제" => {
+                let key = arg_vals
+                    .first()
+                    .ok_or_else(|| RuntimeError::new("삭제: 키 인자 필요", line))?;
+                let mut map = map.borrow_mut();
+                let pos = map.iter().position(|(k, _)| values_equal(k, key));
+                if let Some(i) = pos {
+                    let (_, v) = map.remove(i);
+                    Ok(v)
+                } else {
+                    Err(RuntimeError::new("삭제: 키 없음", line))
+                }
+            }
+            _ => Err(RuntimeError::new(
+                format!("사전 메서드 없음: {}", method),
                 line,
             )),
         },
