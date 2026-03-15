@@ -86,6 +86,10 @@ pub enum Expr {
         params: Vec<(String, Option<Type>)>,
         body: Vec<Stmt>,
     },
+    Range {
+        start: Box<Expr>,
+        end: Box<Expr>,
+    },
 }
 
 #[derive(Debug, Clone)]
@@ -195,6 +199,15 @@ pub enum StmtKind {
         catch_block: Vec<Stmt>,
     },
     Import(String),
+    EnumDef {
+        name: String,
+        variants: Vec<String>,
+    },
+    ForIn {
+        var_name: String,
+        iterable: Expr,
+        body: Vec<Stmt>,
+    },
     Match {
         expr: Expr,
         arms: Vec<MatchArm>,
