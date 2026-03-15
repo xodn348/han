@@ -29,3 +29,4 @@ Output: `안녕하세요, 세계!`
 Source (.hgl) → Lexer → Parser → AST → Interpreter (direct execution)
                                      → CodeGen → LLVM IR → clang → Binary
 ```
+
