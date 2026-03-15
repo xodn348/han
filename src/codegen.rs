@@ -75,6 +75,7 @@ impl CodeGen {
             Type::배열(_) => "i8*",
             Type::구조체(_) => "i8*",
             Type::함수타입 => "i8*",
+            Type::튜플(_) => "i8*",
         }
     }
 
@@ -345,7 +346,11 @@ impl CodeGen {
                 val
             }
 
-            Expr::Range { .. } | Expr::MethodCall { .. } | Expr::Lambda { .. } => {
+            Expr::Range { .. }
+            | Expr::MethodCall { .. }
+            | Expr::Lambda { .. }
+            | Expr::TupleLiteral(_)
+            | Expr::TupleIndex { .. } => {
                 let t = self.fresh_temp();
                 self.emit(&format!("  {} = add nsw i64 0, 0", t));
                 t

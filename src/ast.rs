@@ -26,6 +26,7 @@ pub enum Type {
     배열(Box<Type>),
     구조체(String),
     함수타입,
+    튜플(Vec<Type>),
 }
 
 /// 표현식 AST 노드
@@ -89,6 +90,11 @@ pub enum Expr {
     Range {
         start: Box<Expr>,
         end: Box<Expr>,
+    },
+    TupleLiteral(Vec<Expr>),
+    TupleIndex {
+        object: Box<Expr>,
+        index: usize,
     },
 }
 
