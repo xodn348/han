@@ -91,33 +91,73 @@ fn compile_to_binary(source: &str, output_path: &str) -> Result<(), String> {
 }
 
 fn print_banner() {
-    let c = "\x1b[36m";
     let b = "\x1b[1m";
     let d = "\x1b[2m";
-    let r = "\x1b[0m";
+    let rs = "\x1b[0m";
     let red = "\x1b[91m";
     let blu = "\x1b[94m";
     let y = "\x1b[93m";
 
+    let grad = |i: usize, total: usize| -> String {
+        let t = i as f32 / (total - 1) as f32;
+        let rv = (255.0 * t) as u8;
+        let gv = (100.0 - 50.0 * t) as u8;
+        let bv = (255.0 - 205.0 * t) as u8;
+        format!("\x1b[38;2;{};{};{}m", rv, gv, bv)
+    };
+
+    let han = [
+        "     ⢀⣀⣀⣀⣀⣀⡀⠀⠀⠀⠀⢠⣶⡆",
+        "     ⠘⠛⠛⠛⠛⠛⠃⠀⠀⠀⠀⢸⣿⡇",
+        " ⢰⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⡆⠀⢸⣿⡇",
+        "     ⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⢸⣿⡇",
+        "   ⣴⣿⠟⠛⠛⠛⠻⣿⣦⠀⠀⠀⢸⣿⡿⠿⠿⠇",
+        "  ⢸⣿⡇⠀⠀⠀⠀⠀⢸⣿⡇⠀⠀⢸⣿⡇",
+        "   ⠻⣿⣦⣤⣤⣤⣴⡿⠟⠀⠀⠀⢸⣿⡇",
+        "     ⢀⣈⠉⠉⠉⠁⠀⠀⠀⠀⠀⢸⣿⡇",
+        "     ⢸⣿⠀",
+        "     ⢸⣿⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀",
+        "     ⠘⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠃",
+    ];
+
+    let fl = [
+        "      ⢠⣦⣠⡆      ",
+        "      ⠸⣿⣿⡇      ",
+        "  ⣸⣿⣶⣤⡀⢻⡿⢁⣤⣶⣿⣇  ",
+        "⠈⠛⠛⠿⠿⠟⡂⢀⠻⠿⠿⠛⠛⠁",
+        "    ⣠⣶⣿⡇⢸⣿⣶⣄    ",
+        "  ⠼⢿⣿⡟⠀⠀⢻⣿⡿⠧  ",
+        "      ⠋⠀⠀⠀⠀⠙      ",
+    ];
+
     println!();
-    println!("  {y}✿{r} {red}◓{blu}◒{r}{d} ────────────────────────────────────────────────────────── {red}◓{blu}◒{r} {y}✿{r}");
+    println!(
+        "  {}✿{} {}◓{}◒{}{} ────────────────────────────────────────────────────────── {}◓{}◒{} {}✿{}",
+        y, rs, red, blu, rs, d, red, blu, rs, y, rs
+    );
     println!();
-    println!("  {y}      ⢠⣦⣠⡆{r}       {c}{b}⢀⣀⣀⣀⣀⣀⡀⠀⠀⠀⠀⢠⣶⡆{r}       {y}⢠⣦⣠⡆{r}");
-    println!("  {y}      ⠸⣿⣿⡇{r}       {c}{b}⠘⠛⠛⠛⠛⠛⠃⠀⠀⠀⠀⢸⣿⡇{r}       {y}⠸⣿⣿⡇{r}");
-    println!("  {y}  ⣸⣿⣶⣤⡀⢻⡿⢁⣤⣶⣿⣇{r} {c}{b}⢰⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⡆⠀⢸⣿⡇{r} {y}⣸⣿⣶⣤⡀⢻⡿⢁⣤⣶⣿⣇{r}");
-    println!("  {y}⠈⠛⠛⠿⠿⠟⡂⢀⠻⠿⠿⠛⠛⠁{r}{c}{b}   ⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⢸⣿⡇{r} {y}⠈⠛⠛⠿⠿⠟⡂⢀⠻⠿⠿⠛⠛⠁{r}");
-    println!("  {y}    ⣠⣶⣿⡇⢸⣿⣶⣄{r}     {c}{b}⣴⣿⠟⠛⠛⠛⠻⣿⣦⠀⠀⠀⢸⣿⡿⠿⠿⠇{r} {y}    ⣠⣶⣿⡇⢸⣿⣶⣄{r}");
-    println!("  {y}  ⠼⢿⣿⡟⠀⠀⢻⣿⡿⠧{r}   {c}{b}⢸⣿⡇⠀⠀⠀⠀⠀⢸⣿⡇⠀⠀⢸⣿⡇{r}     {y}⠼⢿⣿⡟⠀⠀⢻⣿⡿⠧{r}");
-    println!("  {y}      ⠋⠀⠀⠀⠀⠙{r}       {c}{b}⠻⣿⣦⣤⣤⣤⣴⡿⠟⠀⠀⠀⢸⣿⡇{r}       {y}⠋⠀⠀⠀⠀⠙{r}");
-    println!("                       {c}{b}⢀⣈⠉⠉⠉⠁⠀⠀⠀⠀⠀⢸⣿⡇{r}");
-    println!("                       {c}{b}⢸⣿⠀{r}");
-    println!("                       {c}{b}⢸⣿⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀{r}");
-    println!("                       {c}{b}⠘⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠃{r}");
+
+    let total = han.len();
+    for (i, line) in han.iter().enumerate() {
+        let g = grad(i, total);
+        if i < fl.len() {
+            println!(
+                "  {}{}{} {}{}{}{}{} {}{}{}",
+                y, fl[i], rs, g, b, line, rs, " ", y, fl[i], rs
+            );
+        } else {
+            println!("                     {}{}{}{}", g, b, line, rs);
+        }
+    }
+
     println!();
-    println!("  {d}               한글 프로그래밍 언어 v0.1.0{r}");
-    println!("  {d}               github.com/xodn348/han{r}");
+    println!("  {}               한글 프로그래밍 언어 v0.1.0{}", d, rs);
+    println!("  {}               github.com/xodn348/han{}", d, rs);
     println!();
-    println!("  {y}✿{r} {red}◓{blu}◒{r}{d} ────────────────────────────────────────────────────────── {red}◓{blu}◒{r} {y}✿{r}");
+    println!(
+        "  {}✿{} {}◓{}◒{}{} ────────────────────────────────────────────────────────── {}◓{}◒{} {}✿{}",
+        y, rs, red, blu, rs, d, red, blu, rs, y, rs
+    );
     println!();
 }
 
