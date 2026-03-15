@@ -25,6 +25,7 @@
 - [Modules](./reference/modules.md)
 - [String Methods](./reference/string-methods.md)
 - [Array Methods](./reference/array-methods.md)
+- [HashMap / Dictionary](./reference/hashmap.md)
 
 # Built-in Functions
 
@@ -33,6 +34,11 @@
 - [Type Conversion](./builtins/conversion.md)
 - [Format Strings](./builtins/format.md)
 - [File I/O](./builtins/file-io.md)
+- [JSON](./builtins/json.md)
+- [HTTP](./builtins/http.md)
+- [Regex](./builtins/regex.md)
+- [Date & Time](./builtins/datetime.md)
+- [System & Process](./builtins/system.md)
 
 # Compiler & Tooling
 

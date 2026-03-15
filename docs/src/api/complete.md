@@ -77,6 +77,33 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 파일쓰기(경로, 내용)      → write file
 파일추가(경로, 내용)      → append to file
 파일존재(경로)            → file exists → 불
+사전(키, 값, ...)        → create HashMap → 사전
+제이슨_파싱(문자열)       → parse JSON → value
+제이슨_생성(값)           → value → JSON string
+제이슨_예쁘게(값)         → value → pretty JSON string
+HTTP_가져오기(url)        → GET request → 문자열
+HTTP_보내기(url, body)    → POST request → 문자열
+정규식_찾기(패턴, 텍스트)  → find matches → [문자열]
+정규식_일치(패턴, 텍스트)  → test match → 불
+정규식_바꾸기(패턴, 텍스트, 대체) → replace → 문자열
+현재시간()               → current datetime → 문자열
+현재날짜()               → current date → 문자열
+타임스탬프()             → unix timestamp → 정수
+실행(명령어)             → shell command → 문자열
+환경변수(이름)           → env var → 문자열 or 없음
+명령인자()               → CLI args → [문자열]
+잠자기(밀리초)           → sleep
+타입(값)                 → type name → 문자열
+```
+
+## MAP METHODS
+
+```
+.키목록()        → all keys → [T]
+.값목록()        → all values → [T]
+.길이()          → entry count → 정수
+.포함(키)        → key exists → 불
+.삭제(키)        → remove entry → removed value
 ```
 
 ## ARRAY METHODS
