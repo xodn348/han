@@ -97,23 +97,54 @@ fn print_banner() {
     let red = "\x1b[91m";
     let blu = "\x1b[94m";
     let mg = "\x1b[38;2;206;80;120m"; // mugunghwa pink
-    let c = "\x1b[36m";
+    let w = "\x1b[37m";
+
+    let fl = [
+        "    ⢠⣦⣠⡆    ",
+        "    ⠸⣿⣿⡇    ",
+        "⣸⣿⣶⣤⡀⢻⡿⢁⣤⣶⣿⣇  ",
+        "⠛⠛⠿⠿⠟⡂⢀⠻⠿⠿⠛⠛  ",
+        "  ⣠⣶⣿⡇⢸⣿⣶⣄    ",
+        "⠼⢿⣿⡟⠀⠀⢻⣿⡿⠧    ",
+        "    ⠋⠀⠀⠀⠀⠙      ",
+    ];
+    let fl_pad = "              ";
+
+    let han = [
+        "    ⢀⣀⣀⣀⣀⣀⡀⠀⠀⠀⠀⢸⣿⡇",
+        "    ⠘⠛⠛⠛⠛⠛⠃⠀⠀⠀⠀⢸⣿⡇",
+        "⢰⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⣶⡆⠀⢸⣿⡇",
+        "    ⣀⣀⣀⣀⣀⠀⠀⠀⠀⠀⢸⣿⡇",
+        "  ⣴⣿⠟⠛⠛⠛⠻⣿⣦⠀⠀⠀⢸⣿⡿⠿⠿⠇",
+        " ⢸⣿⡇⠀⠀⠀⠀⠀⢸⣿⡇⠀⠀⢸⣿⡇",
+        "  ⠻⣿⣦⣤⣤⣤⣴⡿⠟⠀⠀⠀⢸⣿⡇",
+        "    ⢀⣈⠉⠉⠉⠁⠀⠀⠀⠀⠀⢸⣿⡇",
+        "    ⢸⣿⠀",
+        "    ⢸⣿⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⣀⡀",
+        "    ⠘⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠛⠃",
+    ];
 
     println!();
     println!(
-        "  {}◓{}◒{}  ──────────────────  {}◓{}◒{}",
-        red, blu, rs, red, blu, rs
+        "  {}✿{} {}◓{}◒{}{} ─────────────────────────────────────── {}◓{}◒{} {}✿{}",
+        mg, rs, red, blu, rs, d, red, blu, rs, mg, rs
     );
     println!();
-    println!("  {}{} ✿  {}{}한{}", mg, b, c, b, rs);
+
+    for (i, line) in han.iter().enumerate() {
+        let flower = if i < fl.len() { fl[i] } else { fl_pad };
+        println!("  {}{}{}  {}{}{}{}", mg, flower, rs, w, b, line, rs);
+    }
+
     println!();
-    println!("  {}{}한글 프로그래밍 언어{} v0.1.0", c, b, rs);
-    println!("  {}github.com/xodn348/han{}", d, rs);
+    println!("  {}         한글 프로그래밍 언어 v0.1.0{}", d, rs);
+    println!("  {}         github.com/xodn348/han{}", d, rs);
     println!();
     println!(
-        "  {}◓{}◒{}  ──────────────────  {}◓{}◒{}",
-        red, blu, rs, red, blu, rs
+        "  {}✿{} {}◓{}◒{}{} ─────────────────────────────────────── {}◓{}◒{} {}✿{}",
+        mg, rs, red, blu, rs, d, red, blu, rs, mg, rs
     );
+    println!();
     println!();
 }
 
