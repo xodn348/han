@@ -145,7 +145,6 @@ fn print_banner() {
         mg, rs, red, blu, rs, d, red, blu, rs, mg, rs
     );
     println!();
-    println!();
 }
 
 fn run_repl() {

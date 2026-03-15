@@ -1,9 +1,10 @@
 Output assets/demo.gif
 
 Set Shell "bash"
-Set FontSize 16
-Set Width 800
-Set Height 500
+Set FontSize 14
+Set FontFamily "Menlo"
+Set Width 900
+Set Height 600
 Set Theme "Dracula"
 
 Type "hgl repl"
