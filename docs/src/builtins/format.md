@@ -1,0 +1,19 @@
+# Format Strings
+
+## Positional Arguments
+
+```
+형식("이름: {0}, 나이: {1}", "홍길동", 30)
+// → "이름: 홍길동, 나이: 30"
+```
+
+## Named Arguments (from scope)
+
+```
+변수 이름 = "홍길동"
+변수 나이 = 30
+형식("이름: {이름}, 나이: {나이}")
+// → "이름: 홍길동, 나이: 30"
+```
+
+Named mode substitutes `{변수명}` with the variable's value from the current scope.
