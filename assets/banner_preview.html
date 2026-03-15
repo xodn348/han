@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { margin: 0; padding: 40px; background: #0d1117; display: flex; justify-content: center; }
+.terminal {
+  background: #161b22;
+  border-radius: 12px;
+  width: 520px;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.4);
+  overflow: hidden;
+  font-family: 'SF Mono', 'Menlo', 'Apple SD Gothic Neo', monospace;
+}
+.titlebar {
+  background: #21262d;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dot { width: 12px; height: 12px; border-radius: 50%; }
+.dot.red { background: #ff5f57; }
+.dot.yellow { background: #febc2e; }
+.dot.green { background: #28c840; }
+.content {
+  padding: 24px 32px 32px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: #e6edf3;
+}
+.cyan { color: #58a6ff; }
+.red { color: #ff6b6b; }
+.blue { color: #6b9fff; }
+.dim { color: #8b949e; }
+.bold { font-weight: 700; }
+.han-char {
+  font-size: 72px;
+  text-align: center;
+  color: #58a6ff;
+  font-weight: 900;
+  letter-spacing: 4px;
+  text-shadow: 0 0 30px rgba(88, 166, 255, 0.3);
+}
+.taegeuk-line {
+  text-align: center;
+  font-size: 14px;
+  letter-spacing: 3px;
+}
+.subtitle {
+  text-align: center;
+  margin-top: 8px;
+  font-size: 14px;
+  color: #e6edf3;
+  font-weight: 600;
+}
+.version {
+  text-align: center;
+  font-size: 12px;
+  color: #8b949e;
+  margin-top: 4px;
+}
+.prompt {
+  margin-top: 20px;
+  border-top: 1px solid #30363d;
+  padding-top: 16px;
+}
+</style>
+</head>
+<body>
+<div class="terminal">
+  <div class="titlebar">
+    <div class="dot red"></div>
+    <div class="dot yellow"></div>
+    <div class="dot green"></div>
+  </div>
+  <div class="content">
+    <div class="taegeuk-line">
+      <span class="cyan">─────</span>
+      <span class="red">◓</span><span class="blue">◒</span>
+      <span class="cyan"> ◆ </span>
+      <span class="red">◓</span><span class="blue">◒</span>
+      <span class="cyan">─────</span>
+    </div>
+    <div class="han-char">한</div>
+    <div class="taegeuk-line">
+      <span class="cyan">─────</span>
+      <span class="red">◓</span><span class="blue">◒</span>
+      <span class="cyan"> ◆ </span>
+      <span class="red">◓</span><span class="blue">◒</span>
+      <span class="cyan">─────</span>
+    </div>
+    <div class="subtitle">한글 프로그래밍 언어</div>
+    <div class="version">v0.1.0 · github.com/xodn348/han</div>
+    <div class="prompt">
+      <span class="cyan bold">한&gt;</span> <span class="dim">_</span>
+    </div>
+  </div>
+</div>
+</body>
+</html>

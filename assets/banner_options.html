@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { margin: 0; padding: 20px; background: #0d1117; display: flex; flex-direction: column; align-items: center; gap: 30px; }
+.terminal {
+  background: #161b22;
+  border-radius: 10px;
+  width: 480px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+  overflow: hidden;
+  font-family: 'SF Mono', 'Menlo', 'Apple SD Gothic Neo', monospace;
+}
+.titlebar {
+  background: #21262d;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: #8b949e;
+}
+.dot { width: 11px; height: 11px; border-radius: 50%; }
+.dot.r { background: #ff5f57; }
+.dot.y { background: #febc2e; }
+.dot.g { background: #28c840; }
+.content {
+  padding: 20px 28px 24px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #e6edf3;
+  white-space: pre;
+}
+.label {
+  color: #58a6ff;
+  font-family: sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.cyan { color: #58a6ff; }
+.red { color: #ff6b6b; }
+.blue { color: #6b9fff; }
+.dim { color: #6e7681; }
+.white { color: #f0f6fc; font-weight: 700; }
+.yellow { color: #e3b341; }
+.green { color: #3fb950; }
+.bold { font-weight: 700; }
+.big { font-size: 64px; line-height: 1; }
+.med { font-size: 40px; line-height: 1; }
+</style>
+</head>
+<body>
+
+<div class="label">Option A — Minimal Elegance</div>
+<div class="terminal">
+  <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div> hgl repl</div>
+  <div class="content">
+<span class="dim">  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+<span class="cyan bold big">              한</span>
+
+<span class="white">      한글 프로그래밍 언어</span>
+<span class="dim">      v0.1.0 · xodn348/han</span>
+
+<span class="dim">  ━━━━━━━━━━━━━━━━━━━━━━━━━━━━</span>
+
+  <span class="green bold">한&gt;</span> <span class="dim">_</span>
+</div>
+</div>
+
+<div class="label">Option B — Taegeuk Frame</div>
+<div class="terminal">
+  <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div> hgl repl</div>
+  <div class="content">
+
+    <span class="red">◓</span><span class="blue">◒</span><span class="dim"> ──────────────────── </span><span class="red">◓</span><span class="blue">◒</span>
+
+<span class="cyan bold big">              한</span>
+
+<span class="white">      한글 프로그래밍 언어</span>
+<span class="dim">      v0.1.0 · xodn348/han</span>
+
+    <span class="red">◓</span><span class="blue">◒</span><span class="dim"> ──────────────────── </span><span class="red">◓</span><span class="blue">◒</span>
+
+  <span class="green bold">한&gt;</span> <span class="dim">_</span>
+</div>
+</div>
+
+<div class="label">Option C — Mugunghwa + Taegeuk</div>
+<div class="terminal">
+  <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div> hgl repl</div>
+  <div class="content">
+    <span class="yellow">✿</span><span class="dim"> ─── </span><span class="red">◓</span><span class="blue">◒</span><span class="dim"> ────────── </span><span class="red">◓</span><span class="blue">◒</span><span class="dim"> ─── </span><span class="yellow">✿</span>
+
+<span class="cyan bold big">              한</span>
+
+<span class="white">      한글 프로그래밍 언어</span>
+<span class="dim">      v0.1.0 · xodn348/han</span>
+
+    <span class="yellow">✿</span><span class="dim"> ─── </span><span class="red">◓</span><span class="blue">◒</span><span class="dim"> ────────── </span><span class="red">◓</span><span class="blue">◒</span><span class="dim"> ─── </span><span class="yellow">✿</span>
+
+  <span class="green bold">한&gt;</span> <span class="dim">_</span>
+</div>
+</div>
+
+<div class="label">Option D — Clean with Yin-Yang</div>
+<div class="terminal">
+  <div class="titlebar"><div class="dot r"></div><div class="dot y"></div><div class="dot g"></div> hgl repl</div>
+  <div class="content">
+
+              <span class="red">◓</span><span class="blue">◒</span>
+
+<span class="cyan bold big">              한</span>
+
+<span class="white">      한글 프로그래밍 언어</span>
+<span class="dim">      v0.1.0 · xodn348/han</span>
+
+
+  <span class="green bold">한&gt;</span> <span class="dim">_</span>
+</div>
+</div>
+
+</body>
+</html>
