@@ -7,6 +7,7 @@
 - [Installation](./getting-started/installation.md)
 - [Hello World](./getting-started/hello-world.md)
 - [REPL](./getting-started/repl.md)
+- [Learn Korean Through Coding](./getting-started/learn-korean.md)
 
 # Language Reference
 
@@ -38,6 +39,7 @@
 - [CLI Usage](./tooling/cli.md)
 - [VS Code Extension](./tooling/vscode.md)
 - [Architecture](./tooling/architecture.md)
+- [Token Analysis (AI/LLM)](./tooling/token-analysis.md)
 
 # API Reference (LLM-Optimized)
 

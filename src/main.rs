@@ -4,6 +4,7 @@ mod interpreter;
 mod lexer;
 mod lsp;
 mod parser;
+mod typechecker;
 
 use clap::{Parser, Subcommand};
 use std::fs;

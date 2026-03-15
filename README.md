@@ -352,6 +352,51 @@ Han offers these learners something unexpected: a way to practice reading and wr
 
 ---
 
+## Learn Korean Through Coding
+
+Every keyword in Han is a real Korean word. If you're learning Korean, writing Han code is a way to practice reading Hangul in context.
+
+| Code | Pronunciation | Meaning | What it does |
+|------|--------------|---------|-------------|
+| `함수` | ham-su | function (math term) | defines a function |
+| `만약` | man-yak | if/suppose | conditional branch |
+| `반환` | ban-hwan | return/give back | returns a value |
+| `변수` | byeon-su | variable (math term) | declares a mutable variable |
+| `반복` | ban-bok | repetition | for loop |
+| `동안` | dong-an | during/while | while loop |
+| `출력` | chul-ryeok | output | prints to console |
+| `참` | cham | true/truth | boolean true |
+| `거짓` | geo-jit | false/lie | boolean false |
+| `구조` | gu-jo | structure | defines a struct |
+| `만약` | man-yak | if | starts a conditional |
+| `아니면` | a-ni-myeon | otherwise | else branch |
+| `멈춰` | meom-chwo | stop | break |
+| `계속` | gye-sok | continue | continue |
+| `시도` | si-do | attempt | try block |
+| `실패` | sil-pae | failure | catch block |
+
+Reading Han code is reading Korean. Every identifier, every keyword, every method name — it's all real language.
+
+[Learn Hangul in an afternoon →](https://korean.stackexchange.com/a/213)
+
+---
+
+## Token Analysis (AI/LLM)
+
+We tested Han code against Python and JavaScript using GPT-4o's tokenizer (tiktoken):
+
+| Program | Han | Python | JavaScript |
+|---------|-----|--------|------------|
+| Fibonacci | 88 tokens | 54 tokens | 69 tokens |
+
+**Han uses more tokens, not fewer.** Korean keywords average 2-3 tokens each vs 1 for English. This is because BPE (Byte Pair Encoding) tokenizers are trained on English-dominant data — `function` appears billions of times and merges into a single token, while `함수` is rare and gets split into byte-level pieces.
+
+This is a tokenizer training bias, not a property of Korean. If BPE were trained on Korean-heavy data, `함수` could easily be a single token.
+
+Relevant discussion: [Ukrainian LLM Lapa replaced 80K tokens and achieved 1.5x efficiency](https://news.ycombinator.com/item?id=47381382)
+
+---
+
 <details>
 <summary><strong>Language Guide</strong></summary>
 

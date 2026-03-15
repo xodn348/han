@@ -1,3 +1,6 @@
+use crate::ast::StmtKind;
+use crate::lexer;
+use crate::parser;
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 
@@ -192,6 +195,8 @@ pub fn run_lsp() {
     let mut reader = std::io::BufReader::new(stdin.lock());
     let mut writer = std::io::BufWriter::new(stdout.lock());
     let docs = keyword_docs();
+    let mut doc_symbols: Vec<SourceSymbol> = Vec::new();
+    let mut current_source = String::new();
 
     loop {
         let msg = match read_message(&mut reader) {
@@ -256,6 +261,23 @@ pub fn run_lsp() {
                             )),
                         ),
                     ])
+                } else if let Some(sym) = word
+                    .as_ref()
+                    .and_then(|w| doc_symbols.iter().find(|s| &s.name == w))
+                {
+                    serde_like::Value::Object(vec![
+                        (
+                            "kind".to_string(),
+                            serde_like::Value::Str("markdown".to_string()),
+                        ),
+                        (
+                            "value".to_string(),
+                            serde_like::Value::Str(format!(
+                                "**{}** ({})\n\n`{}`",
+                                sym.name, sym.kind, sym.detail
+                            )),
+                        ),
+                    ])
                 } else {
                     serde_like::Value::Null
                 };
@@ -268,7 +290,7 @@ pub fn run_lsp() {
             }
 
             "textDocument/completion" => {
-                let items: Vec<serde_like::Value> = KEYWORDS
+                let mut items: Vec<serde_like::Value> = KEYWORDS
                     .iter()
                     .chain(BUILTINS.iter())
                     .map(|(kw, doc)| {
@@ -282,7 +304,82 @@ pub fn run_lsp() {
                         ])
                     })
                     .collect();
+
+                for sym in &doc_symbols {
+                    let kind = match sym.kind {
+                        "function" => 3,
+                        "variable" => 6,
+                        "struct" => 22,
+                        "enum" => 13,
+                        "enum_variant" => 20,
+                        "field" => 5,
+                        _ => 1,
+                    };
+                    items.push(serde_like::Value::Object(vec![
+                        (
+                            "label".to_string(),
+                            serde_like::Value::Str(sym.name.clone()),
+                        ),
+                        (
+                            "detail".to_string(),
+                            serde_like::Value::Str(sym.detail.clone()),
+                        ),
+                        ("kind".to_string(), serde_like::Value::Int(kind)),
+                    ]));
+                }
+
                 send_response(&mut writer, &id, serde_like::Value::Array(items));
+            }
+
+            "textDocument/didOpen" | "textDocument/didChange" => {
+                if let Some(text) = parse_json_field(&msg, "text") {
+                    current_source = text.to_string();
+                    doc_symbols = extract_symbols(&current_source);
+                }
+            }
+
+            "textDocument/diagnostic" | "textDocument/publishDiagnostics" => {
+                let mut diags = Vec::new();
+                let tokens = lexer::tokenize(&current_source);
+                if let Err(e) = parser::parse(tokens) {
+                    diags.push(serde_like::Value::Object(vec![
+                        (
+                            "range".to_string(),
+                            serde_like::Value::Object(vec![
+                                (
+                                    "start".to_string(),
+                                    serde_like::Value::Object(vec![
+                                        (
+                                            "line".to_string(),
+                                            serde_like::Value::Int(e.line.saturating_sub(1) as i64),
+                                        ),
+                                        ("character".to_string(), serde_like::Value::Int(0)),
+                                    ]),
+                                ),
+                                (
+                                    "end".to_string(),
+                                    serde_like::Value::Object(vec![
+                                        (
+                                            "line".to_string(),
+                                            serde_like::Value::Int(e.line.saturating_sub(1) as i64),
+                                        ),
+                                        ("character".to_string(), serde_like::Value::Int(100)),
+                                    ]),
+                                ),
+                            ]),
+                        ),
+                        ("severity".to_string(), serde_like::Value::Int(1)),
+                        ("message".to_string(), serde_like::Value::Str(e.message)),
+                    ]));
+                }
+                let result = serde_like::Value::Object(vec![
+                    (
+                        "kind".to_string(),
+                        serde_like::Value::Str("full".to_string()),
+                    ),
+                    ("items".to_string(), serde_like::Value::Array(diags)),
+                ]);
+                send_response(&mut writer, &id, result);
             }
 
             "shutdown" => {
@@ -324,6 +421,94 @@ fn extract_word_at_cursor(msg: &str) -> Option<String> {
         return None;
     }
     Some(chars[start..end].iter().collect())
+}
+
+struct SourceSymbol {
+    name: String,
+    kind: &'static str,
+    detail: String,
+}
+
+fn extract_symbols(source: &str) -> Vec<SourceSymbol> {
+    let mut symbols = Vec::new();
+    let tokens = lexer::tokenize(source);
+    let program = match parser::parse(tokens) {
+        Ok(p) => p,
+        Err(_) => return symbols,
+    };
+
+    for stmt in &program.stmts {
+        match &stmt.kind {
+            StmtKind::FuncDef {
+                name,
+                params,
+                return_type,
+                ..
+            } => {
+                let params_str: Vec<String> = params
+                    .iter()
+                    .map(|(n, t)| format!("{}: {:?}", n, t))
+                    .collect();
+                let ret = return_type
+                    .as_ref()
+                    .map(|t| format!(" -> {:?}", t))
+                    .unwrap_or_default();
+                symbols.push(SourceSymbol {
+                    name: name.clone(),
+                    kind: "function",
+                    detail: format!("함수 {}({}){}", name, params_str.join(", "), ret),
+                });
+            }
+            StmtKind::VarDecl {
+                name, ty, mutable, ..
+            } => {
+                let prefix = if *mutable { "변수" } else { "상수" };
+                let ty_str = ty
+                    .as_ref()
+                    .map(|t| format!(": {:?}", t))
+                    .unwrap_or_default();
+                symbols.push(SourceSymbol {
+                    name: name.clone(),
+                    kind: "variable",
+                    detail: format!("{} {}{}", prefix, name, ty_str),
+                });
+            }
+            StmtKind::StructDef { name, fields } => {
+                let fields_str: Vec<String> = fields
+                    .iter()
+                    .map(|(n, t)| format!("{}: {:?}", n, t))
+                    .collect();
+                symbols.push(SourceSymbol {
+                    name: name.clone(),
+                    kind: "struct",
+                    detail: format!("구조 {} {{ {} }}", name, fields_str.join(", ")),
+                });
+                for (fname, ftype) in fields {
+                    symbols.push(SourceSymbol {
+                        name: fname.clone(),
+                        kind: "field",
+                        detail: format!("{}.{}: {:?}", name, fname, ftype),
+                    });
+                }
+            }
+            StmtKind::EnumDef { name, variants } => {
+                symbols.push(SourceSymbol {
+                    name: name.clone(),
+                    kind: "enum",
+                    detail: format!("열거 {} {{ {} }}", name, variants.join(", ")),
+                });
+                for v in variants {
+                    symbols.push(SourceSymbol {
+                        name: format!("{}::{}", name, v),
+                        kind: "enum_variant",
+                        detail: format!("{}::{}", name, v),
+                    });
+                }
+            }
+            _ => {}
+        }
+    }
+    symbols
 }
 
 fn is_hangul(c: char) -> bool {
