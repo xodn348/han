@@ -201,6 +201,12 @@ fn main() {
                     } else {
                         eprintln!("[런타임 에러] {}", e.message);
                     }
+                    if !e.stack_trace.is_empty() {
+                        eprintln!("스택 트레이스:");
+                        for frame in &e.stack_trace {
+                            eprintln!("{}", frame);
+                        }
+                    }
                     process::exit(1);
                 }
             }
