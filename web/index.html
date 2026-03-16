@@ -166,7 +166,6 @@
     <div id="editor"></div>
     <div class="examples">
       <button class="example-btn" onclick="loadExample('golden')">Golden</button>
-      <button class="example-btn" onclick="loadExample('fibonacci')">피보나치</button>
       <button class="example-btn" onclick="loadExample('koreanage')">한국 나이</button>
       <button class="example-btn" onclick="loadExample('bmi')">BMI</button>
       <button class="example-btn" onclick="loadExample('euclid')">유클리드</button>
@@ -248,22 +247,6 @@
 
 반복 변수 i = 0; i < 후렴.길이(); i += 1 {
     출력(후렴[i])
-}`,
-
-    fibonacci: `함수 피보나치(n: 정수) -> 정수 {
-    만약 n <= 1 {
-        반환 n
-    }
-    반환 피보나치(n - 1) + 피보나치(n - 2)
-}
-
-반복 변수 i = 0; i < 10; i += 1 {
-    출력(형식("피보나치({0}) = {1}", i, 피보나치(i)))
-}
-
-반복 변수 i = 2; i < 10; i += 1 {
-    변수 비율 = 실수변환(피보나치(i)) / 실수변환(피보나치(i - 1))
-    출력(형식("{0} / {1} = {2}", 피보나치(i), 피보나치(i - 1), 비율))
 }`,
 
     euclid: `함수 최대공약수(가: 정수, 나: 정수) -> 정수 {
@@ -350,7 +333,8 @@
 출력(형식("판정: {0}", 판정(지수)))`
   };
 
-  const initialCode = EXAMPLES['golden'];
+  const initialCode = `출력("Golden — KPOP Demon Hunters")
+출력("밝게 빛나는 우린")`;
 
   view = new EditorView({
     state: EditorState.create({
