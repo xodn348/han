@@ -158,13 +158,13 @@
       <button class="run-btn" id="runBtn" onclick="runCode()">▶ 실행</button>
     </div>
     <textarea id="editor" spellcheck="false">출력("🎵 Golden — KPOP Demon Hunters")
-출력("밝게 빛나는 우린")</textarea>
+출력("영원히 깨질 수 없는")</textarea>
     <div class="examples">
-      <button class="example-btn" onclick="loadExample('hello')">변수</button>
-      <button class="example-btn" onclick="loadExample('array')">배열</button>
-      <button class="example-btn" onclick="loadExample('struct')">구조체</button>
-      <button class="example-btn" onclick="loadExample('func')">함수</button>
-      <button class="example-btn" onclick="loadExample('analyze')">문자열</button>
+      <button class="example-btn" onclick="loadExample('golden')">🎵 Golden</button>
+      <button class="example-btn" onclick="loadExample('store')">편의점</button>
+      <button class="example-btn" onclick="loadExample('grades')">성적표</button>
+      <button class="example-btn" onclick="loadExample('fizzbuzz')">피즈버즈</button>
+      <button class="example-btn" onclick="loadExample('euclid')">유클리드</button>
     </div>
   </div>
 
@@ -180,15 +180,10 @@
   import init, { run_han } from './han.js';
 
   const EXAMPLES = {
-    hello: `변수 훅 = "Gonna be, gonna be golden"
-변수 한국어 = "영원히 깨질 수 없는"
+    golden: `변수 제목 = "Golden"
+변수 아티스트 = "KPOP Demon Hunters"
 
-출력("🎵 Golden — KPOP Demon Hunters")
-출력(훅)
-출력(한국어)
-출력("→ Can never be broken")`,
-
-    array: `변수 후렴 = [
+변수 후렴 = [
     "We're goin' up, up, up, it's our moment",
     "You know together we're glowing",
     "Gonna be, gonna be golden",
@@ -196,51 +191,85 @@
     "Gonna be, gonna be golden"
 ]
 
+출력("🎵 " + 제목 + " — " + 아티스트)
+출력("")
 반복 변수 i = 0; i < 후렴.길이(); i += 1 {
     출력(후렴[i])
 }`,
 
-    struct: `구조 가사줄 {
-    원문: 문자열,
-    뜻: 문자열
+    store: `변수 상품 = ["삼각김밥", "컵라면", "에너지드링크", "삼립호빵"]
+변수 가격 = [1200, 1300, 2500, 1500]
+
+출력("=== GS25 영수증 ===")
+변수 합계 = 0
+반복 변수 i = 0; i < 상품.길이(); i += 1 {
+    출력(형식("{0}  {1}원", 상품[i], 가격[i]))
+    합계 = 합계 + 가격[i]
+}
+출력("------------------")
+출력(형식("합계  {0}원", 합계))
+출력(형식("카드  -{0}원", 0))
+출력(형식("결제  {0}원", 합계))`,
+
+    grades: `구조 학생 {
+    이름: 문자열,
+    국어: 정수,
+    수학: 정수,
+    영어: 정수
 }
 
-변수 후렴 = [
-    가사줄 { 원문: "Gonna be, gonna be golden", 뜻: "우린 골든이 될 거야" },
-    가사줄 { 원문: "영원히 깨질 수 없는", 뜻: "Can never be broken" },
-    가사줄 { 원문: "밝게 빛나는 우린", 뜻: "We shine brightly" }
+변수 반 = [
+    학생 { 이름: "김민준", 국어: 85, 수학: 92, 영어: 78 },
+    학생 { 이름: "이서연", 국어: 90, 수학: 88, 영어: 95 },
+    학생 { 이름: "박지호", 국어: 72, 수학: 96, 영어: 83 }
 ]
 
-반복 변수 i = 0; i < 후렴.길이(); i += 1 {
-    출력(후렴[i].원문)
-    출력("  → " + 후렴[i].뜻)
+출력("이름    국어  수학  영어  평균")
+출력("----------------------------")
+반복 변수 i = 0; i < 반.길이(); i += 1 {
+    변수 평균 = (반[i].국어 + 반[i].수학 + 반[i].영어) / 3
+    출력(형식("{0}  {1}   {2}   {3}   {4}",
+        반[i].이름, 반[i].국어, 반[i].수학, 반[i].영어, 평균))
 }`,
 
-    func: `함수 후렴출력(횟수: 정수) {
-    반복 변수 i = 0; i < 횟수; i += 1 {
-        출력("Gonna be, gonna be golden")
+    fizzbuzz: `출력("=== 피즈버즈 (1~30) ===")
+반복 변수 i = 1; i <= 30; i += 1 {
+    만약 i % 15 == 0 {
+        출력("피즈버즈")
+    } 아니면 만약 i % 3 == 0 {
+        출력("피즈")
+    } 아니면 만약 i % 5 == 0 {
+        출력("버즈")
+    } 아니면 {
+        출력(i)
     }
+}`,
+
+    euclid: `함수 최대공약수(가: 정수, 나: 정수) -> 정수 {
+    만약 나 == 0 {
+        반환 가
+    }
+    반환 최대공약수(나, 가 % 나)
 }
 
-출력("We're goin' up, up, up, it's our moment")
-출력("You know together we're glowing")
-후렴출력(1)
-출력("영원히 깨질 수 없는")
-후렴출력(1)`,
-
-    analyze: `변수 가사 = "영원히 깨질 수 없는"
-
-출력("원문: " + 가사)
-출력("뜻: Can never be broken")
-출력(형식("글자 수: {0}자", 가사.길이()))
-
-변수 단어들 = 가사.분리(" ")
-출력(형식("단어 수: {0}개", 단어들.길이()))
+출력("=== 유클리드 호제법 ===")
+출력("기원전 300년 알고리즘 — 지금도 암호화에 쓰임")
+출력("")
+출력(형식("GCD(48, 18)      = {0}", 최대공약수(48, 18)))
+출력(형식("GCD(1071, 462)   = {0}", 최대공약수(1071, 462)))
+출력(형식("GCD(100, 75)     = {0}", 최대공약수(100, 75)))
 출력("")
 
-반복 변수 i = 0; i < 단어들.길이(); i += 1 {
-    출력(형식("  {0}. {1}", i + 1, 단어들[i]))
-}`
+변수 가 = 48
+변수 나 = 18
+출력(형식("GCD({0}, {1}) 계산 과정:", 가, 나))
+동안 나 != 0 {
+    변수 나머지 = 가 % 나
+    출력(형식("  {0} % {1} = {2}", 가, 나, 나머지))
+    가 = 나
+    나 = 나머지
+}
+출력(형식("  → 최대공약수: {0}", 가))`
   };
 
   let wasmReady = false;
