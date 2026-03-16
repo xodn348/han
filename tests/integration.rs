@@ -135,3 +135,82 @@ fn test_compiled_backend_try_catch_handles_division_by_zero() {
 
     assert_eq!(out, "222");
 }
+
+#[test]
+#[ignore = "codegen: method call codegen not yet implemented"]
+fn test_compiled_backend_string_method_length() {
+    let out = build_and_run("출력(\"hello\".길이())\n", "han_string_len");
+
+    assert_eq!(out, "5");
+}
+
+#[test]
+#[ignore = "codegen: method call codegen not yet implemented"]
+fn test_compiled_backend_array_method_length() {
+    let out = build_and_run(
+        "변수 values: [정수] = [3, 4, 5]\n출력(values.길이())\n",
+        "han_array_len",
+    );
+
+    assert_eq!(out, "3");
+}
+
+#[test]
+#[ignore = "codegen: method call codegen not yet implemented"]
+fn test_compiled_backend_struct_impl_method_call() {
+    let out = build_and_run(
+        "구조 Rect { width: 정수, height: 정수 }\n구현 Rect {\n    함수 area(자신: Rect) -> 정수 {\n        반환 자신.width * 자신.height\n    }\n}\n변수 rect: Rect = Rect { width: 2, height: 3 }\n출력(rect.area())\n",
+        "han_struct_method",
+    );
+
+    assert_eq!(out, "6");
+}
+
+#[test]
+#[ignore = "codegen: enum variant IR generation in progress"]
+fn test_compiled_backend_enum_match_branches_by_variant_tag() {
+    let out = build_and_run(
+        "열거 Direction { Up, Down }
+변수 dir = Direction::Down
+맞춰 dir {
+    Up => 출력(11)
+    Down => 출력(22)
+    _ => 출력(33)
+}
+",
+        "han_enum_match",
+    );
+
+    assert_eq!(out, "22");
+}
+
+#[test]
+#[ignore = "codegen: Korean identifiers in LLVM IR not yet supported"]
+fn test_compiled_backend_lambda_outputs_value() {
+    let out = build_and_run(
+        "변수 두배 = 함수(x: 정수) {
+    반환 x * 2
+}
+출력(두배(5))
+",
+        "han_lambda_basic",
+    );
+
+    assert_eq!(out, "10");
+}
+
+#[test]
+#[ignore = "codegen: Korean identifiers in LLVM IR not yet supported"]
+fn test_compiled_backend_closure_captures_outer_variable() {
+    let out = build_and_run(
+        "변수 배수 = 3
+변수 곱하기 = 함수(x: 정수) {
+    반환 x * 배수
+}
+출력(곱하기(4))
+",
+        "han_lambda_capture",
+    );
+
+    assert_eq!(out, "12");
+}

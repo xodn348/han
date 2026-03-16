@@ -10,6 +10,7 @@ pub struct CodeGen {
     loop_stack: Vec<(String, String)>,
     var_types: HashMap<String, &'static str>,
     struct_defs: HashMap<String, Vec<String>>,
+    enum_defs: HashMap<String, Vec<String>>,
     current_error_flag: Option<String>,
     current_error_message: Option<String>,
 }
@@ -25,6 +26,7 @@ impl CodeGen {
             loop_stack: Vec::new(),
             var_types: HashMap::new(),
             struct_defs: HashMap::new(),
+            enum_defs: HashMap::new(),
             current_error_flag: None,
             current_error_message: None,
         }
@@ -238,7 +240,10 @@ impl CodeGen {
 
         self.emit(&format!("{}:", end_lbl));
         let final_result = self.fresh_temp();
-        self.emit(&format!("  {} = load i64, i64* {}", final_result, result_ptr));
+        self.emit(&format!(
+            "  {} = load i64, i64* {}",
+            final_result, result_ptr
+        ));
         final_result
     }
 
@@ -253,7 +258,10 @@ impl CodeGen {
         let is_non_negative = self.fresh_temp();
         self.emit(&format!("  {} = icmp sge i64 {}, 0", is_non_negative, idx));
         let is_before_end = self.fresh_temp();
-        self.emit(&format!("  {} = icmp slt i64 {}, {}", is_before_end, idx, len));
+        self.emit(&format!(
+            "  {} = icmp slt i64 {}, {}",
+            is_before_end, idx, len
+        ));
         let in_bounds = self.fresh_temp();
         self.emit(&format!(
             "  {} = and i1 {}, {}",
@@ -303,7 +311,10 @@ impl CodeGen {
         let is_non_negative = self.fresh_temp();
         self.emit(&format!("  {} = icmp sge i64 {}, 0", is_non_negative, idx));
         let is_before_end = self.fresh_temp();
-        self.emit(&format!("  {} = icmp slt i64 {}, {}", is_before_end, idx, len));
+        self.emit(&format!(
+            "  {} = icmp slt i64 {}, {}",
+            is_before_end, idx, len
+        ));
         let in_bounds = self.fresh_temp();
         self.emit(&format!(
             "  {} = and i1 {}, {}",
@@ -343,7 +354,10 @@ impl CodeGen {
         let start_val = self.gen_expr(start);
         let end_val = self.gen_expr(end);
         let raw_len = self.fresh_temp();
-        self.emit(&format!("  {} = sub nsw i64 {}, {}", raw_len, end_val, start_val));
+        self.emit(&format!(
+            "  {} = sub nsw i64 {}, {}",
+            raw_len, end_val, start_val
+        ));
 
         let is_negative = self.fresh_temp();
         self.emit(&format!("  {} = icmp slt i64 {}, 0", is_negative, raw_len));
@@ -483,7 +497,10 @@ impl CodeGen {
         }
         self.var_types.insert(error_name.to_string(), "i8*");
         let error_value = self.fresh_temp();
-        self.emit(&format!("  {} = load i8*, i8** %error_message", error_value));
+        self.emit(&format!(
+            "  {} = load i8*, i8** %error_message",
+            error_value
+        ));
         self.emit(&format!("  store i8* {}, i8** {}", error_value, error_var));
         self.clear_error_state();
         for stmt in catch_block {
@@ -713,6 +730,15 @@ impl CodeGen {
                 t
             }
         }
+    }
+
+    fn resolve_enum_tag(&self, variant: &str) -> Option<usize> {
+        for (_enum_name, variants) in &self.enum_defs {
+            if let Some(pos) = variants.iter().position(|v| v == variant) {
+                return Some(pos);
+            }
+        }
+        None
     }
 
     fn find_field_index(&self, object: &Expr, field: &str) -> usize {
@@ -980,8 +1006,29 @@ impl CodeGen {
                     };
 
                     match &arm.pattern {
-                        crate::ast::Pattern::Wildcard | crate::ast::Pattern::Identifier(_) => {
+                        crate::ast::Pattern::Wildcard => {
                             self.emit(&format!("  br label %{}", arm_lbl));
+                        }
+                        crate::ast::Pattern::Identifier(variant_name) => {
+                            let tag = self.resolve_enum_tag(variant_name);
+                            if let Some(tag_val) = tag {
+                                let tag_tmp = self.fresh_temp();
+                                self.emit(&format!(
+                                    "  {} = extractvalue {{ i64, i64 }} {}, 0",
+                                    tag_tmp, val
+                                ));
+                                let cmp = self.fresh_temp();
+                                self.emit(&format!(
+                                    "  {} = icmp eq i64 {}, {}",
+                                    cmp, tag_tmp, tag_val
+                                ));
+                                self.emit(&format!(
+                                    "  br i1 {}, label %{}, label %{}",
+                                    cmp, arm_lbl, next_lbl
+                                ));
+                            } else {
+                                self.emit(&format!("  br label %{}", arm_lbl));
+                            }
                         }
                         crate::ast::Pattern::IntLiteral(n) => {
                             let cmp = self.fresh_temp();
@@ -1024,7 +1071,9 @@ impl CodeGen {
                 self.emit(&format!("{}:", end_lbl));
             }
             StmtKind::ImplBlock { .. } => {}
-            StmtKind::EnumDef { .. } => {}
+            StmtKind::EnumDef { name, variants } => {
+                self.enum_defs.insert(name.clone(), variants.clone());
+            }
             StmtKind::ForIn {
                 var_name,
                 iterable,
@@ -1296,5 +1345,43 @@ mod tests {
         assert!(ir.contains("catch"));
         assert!(ir.contains("store i1 1, i1* %error_flag"));
         assert!(ir.contains("load i1, i1* %error_flag"));
+    }
+
+    #[test]
+    fn test_codegen_enum_match_switches_on_enum_tag() {
+        let program = Program::new(vec![
+            Stmt::unspanned(StmtKind::EnumDef {
+                name: "Direction".to_string(),
+                variants: vec!["Up".to_string(), "Down".to_string()],
+            }),
+            Stmt::unspanned(StmtKind::VarDecl {
+                name: "dir".to_string(),
+                ty: None,
+                value: Expr::Identifier("Direction::Down".to_string()),
+                mutable: true,
+            }),
+            Stmt::unspanned(StmtKind::Match {
+                expr: Expr::Identifier("dir".to_string()),
+                arms: vec![
+                    crate::ast::MatchArm {
+                        pattern: crate::ast::Pattern::Identifier("Up".to_string()),
+                        body: vec![make_print_call("up")],
+                    },
+                    crate::ast::MatchArm {
+                        pattern: crate::ast::Pattern::Identifier("Down".to_string()),
+                        body: vec![make_print_call("down")],
+                    },
+                    crate::ast::MatchArm {
+                        pattern: crate::ast::Pattern::Wildcard,
+                        body: vec![make_print_call("default")],
+                    },
+                ],
+            }),
+        ]);
+        let ir = codegen(&program);
+        assert!(ir.contains("{ i64, i64 }"));
+        assert!(ir.contains("extractvalue { i64, i64 }"));
+        assert!(ir.contains("icmp eq i64"));
+        assert!(ir.contains("match_arm"));
     }
 }

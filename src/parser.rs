@@ -177,7 +177,7 @@ impl Parser {
                 return Err(ParseError::new(
                     format!("함수 이름 예상, '{:?}' 발견", tok),
                     span.line,
-                ))
+                ));
             }
         };
 
@@ -200,7 +200,7 @@ impl Parser {
                     return Err(ParseError::new(
                         format!("매개변수 이름 예상, '{:?}' 발견", tok),
                         span.line,
-                    ))
+                    ));
                 }
             };
             self.expect(&Token::Colon)?;
@@ -242,7 +242,7 @@ impl Parser {
                 return Err(ParseError::new(
                     format!("변수 이름 예상, '{:?}' 발견", tok),
                     span.line,
-                ))
+                ));
             }
         };
 
@@ -622,7 +622,7 @@ impl Parser {
                             return Err(ParseError::new(
                                 format!("열거형 변형 이름 예상, '{:?}' 발견", tok),
                                 line,
-                            ))
+                            ));
                         }
                     };
                     Expr::Identifier(format!("{}::{}", name, variant))
@@ -647,7 +647,7 @@ impl Parser {
                                 return Err(ParseError::new(
                                     format!("필드 이름 예상, '{:?}' 발견", tok),
                                     line,
-                                ))
+                                ));
                             }
                         };
                         self.expect(&Token::Colon)?;
@@ -725,7 +725,7 @@ impl Parser {
                             return Err(ParseError::new(
                                 format!("람다 매개변수 이름 예상, '{:?}' 발견", tok),
                                 line,
-                            ))
+                            ));
                         }
                     };
                     let pty = if matches!(self.peek(), Token::Colon) {
@@ -747,7 +747,7 @@ impl Parser {
                 return Err(ParseError::new(
                     format!("표현식에서 예상치 못한 토큰: {:?}", tok),
                     line,
-                ))
+                ));
             }
         };
 
@@ -779,7 +779,7 @@ impl Parser {
                             return Err(ParseError::new(
                                 format!("필드/메서드 이름 예상, '{:?}' 발견", tok),
                                 line,
-                            ))
+                            ));
                         }
                     };
                     if matches!(self.peek(), Token::LParen) {
@@ -857,7 +857,7 @@ impl Parser {
                 return Err(ParseError::new(
                     format!("구조체 이름 예상, '{:?}' 발견", tok),
                     span.line,
-                ))
+                ));
             }
         };
         self.expect(&Token::LBrace)?;
@@ -869,7 +869,7 @@ impl Parser {
                     return Err(ParseError::new(
                         format!("필드 이름 예상, '{:?}' 발견", tok),
                         span.line,
-                    ))
+                    ));
                 }
             };
             self.expect(&Token::Colon)?;
@@ -898,7 +898,7 @@ impl Parser {
                         return Err(ParseError::new(
                             format!("에러 변수 이름 예상, '{:?}' 발견", tok),
                             line,
-                        ))
+                        ));
                     }
                 };
                 self.expect(&Token::RParen)?;
@@ -1004,7 +1004,7 @@ impl Parser {
                 return Err(ParseError::new(
                     format!("구조체 이름 예상, '{:?}' 발견", tok),
                     span.line,
-                ))
+                ));
             }
         };
         self.expect(&Token::LBrace)?;
@@ -1035,7 +1035,7 @@ impl Parser {
                 return Err(ParseError::new(
                     format!("열거형 이름 예상, '{:?}' 발견", tok),
                     span.line,
-                ))
+                ));
             }
         };
         self.expect(&Token::LBrace)?;
@@ -1047,7 +1047,7 @@ impl Parser {
                     return Err(ParseError::new(
                         format!("열거형 변형 이름 예상, '{:?}' 발견", tok),
                         span.line,
-                    ))
+                    ));
                 }
             }
             if matches!(self.peek(), Token::Comma) {
