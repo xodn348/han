@@ -32,6 +32,22 @@ impl CodeGen {
         }
     }
 
+    fn sanitize_ident(name: &str) -> String {
+        name.chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '_' {
+                    c.to_string()
+                } else {
+                    format!("u{:04X}", c as u32)
+                }
+            })
+            .collect()
+    }
+
+    fn var_ptr(name: &str) -> String {
+        format!("%var_{}", Self::sanitize_ident(name))
+    }
+
     fn fresh_temp(&mut self) -> String {
         let t = format!("%t{}", self.temp_count);
         self.temp_count += 1;
@@ -413,7 +429,7 @@ impl CodeGen {
         self.emit(&format!("  {} = alloca i64", idx_ptr));
         self.emit(&format!("  store i64 0, i64* {}", idx_ptr));
 
-        let var_ptr_name = format!("%var_{}", var_name);
+        let var_ptr_name = Self::var_ptr(var_name);
         if !self.var_types.contains_key(var_name) {
             self.emit(&format!("  {} = alloca i64", var_ptr_name));
         }
@@ -491,7 +507,7 @@ impl CodeGen {
         }
 
         self.emit(&format!("{}:", catch_lbl));
-        let error_var = format!("%var_{}", error_name);
+        let error_var = Self::var_ptr(error_name);
         if !self.var_types.contains_key(error_name) {
             self.emit(&format!("  {} = alloca i8*", error_var));
         }
@@ -547,8 +563,11 @@ impl CodeGen {
                 let var_ty = self.var_types.get(name.as_str()).copied().unwrap_or("i64");
                 let t = self.fresh_temp();
                 self.emit(&format!(
-                    "  {} = load {}, {}* %var_{}",
-                    t, var_ty, var_ty, name
+                    "  {} = load {}, {}* {}",
+                    t,
+                    var_ty,
+                    var_ty,
+                    Self::var_ptr(name)
                 ));
                 t
             }
@@ -556,8 +575,11 @@ impl CodeGen {
                 let var_ty = self.var_types.get(name.as_str()).copied().unwrap_or("i64");
                 let val = self.gen_expr(value);
                 self.emit(&format!(
-                    "  store {} {}, {}* %var_{}",
-                    var_ty, val, var_ty, name
+                    "  store {} {}, {}* {}",
+                    var_ty,
+                    val,
+                    var_ty,
+                    Self::var_ptr(name)
                 ));
                 val
             }
@@ -638,7 +660,13 @@ impl CodeGen {
                     .map(|(ty, v)| format!("{} {}", ty, v))
                     .collect::<Vec<_>>()
                     .join(", ");
-                self.emit(&format!("  {} = call {} @{}({})", t, ret_ty, name, arg_str));
+                self.emit(&format!(
+                    "  {} = call {} @{}({})",
+                    t,
+                    ret_ty,
+                    Self::sanitize_ident(name),
+                    arg_str
+                ));
                 t
             }
             Expr::ArrayLiteral(elems) => {
@@ -856,11 +884,14 @@ impl CodeGen {
                     .map(|t| Self::llvm_type(t))
                     .unwrap_or_else(|| self.infer_type(value));
                 self.var_types.insert(name.clone(), llvm_ty);
-                self.emit(&format!("  %var_{} = alloca {}", name, llvm_ty));
+                self.emit(&format!("  {} = alloca {}", Self::var_ptr(name), llvm_ty));
                 let val = self.gen_expr(value);
                 self.emit(&format!(
-                    "  store {} {}, {}* %var_{}",
-                    llvm_ty, val, llvm_ty, name
+                    "  store {} {}, {}* {}",
+                    llvm_ty,
+                    val,
+                    llvm_ty,
+                    Self::var_ptr(name)
                 ));
             }
             StmtKind::ExprStmt(expr) => {
@@ -1096,22 +1127,32 @@ impl CodeGen {
 
         let param_str = params
             .iter()
-            .map(|(pname, pty)| format!("{} %{}", Self::llvm_type(pty), pname))
+            .map(|(pname, pty)| {
+                format!("{} %{}", Self::llvm_type(pty), Self::sanitize_ident(pname))
+            })
             .collect::<Vec<_>>()
             .join(", ");
 
         self.var_types.clear();
-        self.emit(&format!("define {} @{}({}) {{", ret_ty, name, param_str));
+        self.emit(&format!(
+            "define {} @{}({}) {{",
+            ret_ty,
+            Self::sanitize_ident(name),
+            param_str
+        ));
         self.emit("entry:");
         self.init_error_state();
 
         for (pname, pty) in params {
             let llvm_ty = Self::llvm_type(pty);
             self.var_types.insert(pname.clone(), llvm_ty);
-            self.emit(&format!("  %var_{} = alloca {}", pname, llvm_ty));
+            self.emit(&format!("  {} = alloca {}", Self::var_ptr(pname), llvm_ty));
             self.emit(&format!(
-                "  store {} %{}, {}* %var_{}",
-                llvm_ty, pname, llvm_ty, pname
+                "  store {} %{}, {}* {}",
+                llvm_ty,
+                Self::sanitize_ident(pname),
+                llvm_ty,
+                Self::var_ptr(pname)
             ));
         }
 
