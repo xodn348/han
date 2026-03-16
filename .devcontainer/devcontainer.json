@@ -1,0 +1,15 @@
+{
+  "name": "Han Rust Dev",
+  "build": {
+    "dockerfile": "../Dockerfile",
+    "context": "..",
+    "target": "dev",
+  },
+  "remoteUser": "root",
+  "mounts": [
+    "source=${localEnv:HOME}/.gitconfig,target=/root/.gitconfig,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.gitignore,target=/root/.gitignore,type=bind,consistency=cached",
+    "source=${localEnv:HOME}/.ssh,target=/root/.ssh,type=bind,consistency=cached",
+  ],
+  "postCreateCommand": "rustup component add rust-analyzer clippy && git config --global core.excludesfile ~/.gitignore && chmod 700 /root/.ssh && chmod 600 /root/.ssh/* || true",
+}
