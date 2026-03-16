@@ -157,13 +157,13 @@
       <span>코드 편집기</span>
       <button class="run-btn" id="runBtn" onclick="runCode()">▶ 실행</button>
     </div>
-    <textarea id="editor" spellcheck="false">출력("안녕하세요, 세계!")</textarea>
+    <textarea id="editor" spellcheck="false">출력("뚜두뚜두! 한 (한) 언어에 오신 걸 환영해요 🎵")</textarea>
     <div class="examples">
-      <button class="example-btn" onclick="loadExample('hello')">Hello World</button>
+      <button class="example-btn" onclick="loadExample('hello')">인사</button>
+      <button class="example-btn" onclick="loadExample('bts')">BTS 멤버</button>
       <button class="example-btn" onclick="loadExample('fibonacci')">피보나치</button>
-      <button class="example-btn" onclick="loadExample('loop')">반복문</button>
-      <button class="example-btn" onclick="loadExample('struct')">구조체</button>
-      <button class="example-btn" onclick="loadExample('closure')">클로저</button>
+      <button class="example-btn" onclick="loadExample('idol')">아이돌 프로필</button>
+      <button class="example-btn" onclick="loadExample('lyrics')">가사 분석</button>
     </div>
   </div>
 
@@ -179,7 +179,19 @@
   import init, { run_han } from './han.js';
 
   const EXAMPLES = {
-    hello: `출력("안녕하세요, 세계!")`,
+    hello: `출력("뚜두뚜두! 한 (한) 언어에 오신 걸 환영해요 🎵")
+출력("")
+출력("한글로 코딩하는 세상, 지금 시작합니다.")`,
+
+    bts: `변수 멤버들 = ["RM", "진", "슈가", "제이홉", "지민", "뷔", "정국"]
+
+출력("=== BTS 멤버 명단 ===")
+반복 변수 i = 0; i < 멤버들.길이(); i += 1 {
+    출력(형식("{0}번: {1}", i + 1, 멤버들[i]))
+}
+출력("")
+출력(형식("총 {0}명, 다 같이 방탄!", 멤버들.길이()))`,
+
     fibonacci: `함수 피보나치(n: 정수) -> 정수 {
     만약 n <= 1 {
         반환 n
@@ -187,28 +199,43 @@
     반환 피보나치(n - 1) + 피보나치(n - 2)
 }
 
+출력("=== 피보나치 수열 ===")
 반복 변수 i = 0; i < 10; i += 1 {
-    출력(피보나치(i))
+    출력(형식("피보나치({0}) = {1}", i, 피보나치(i)))
 }`,
-    loop: `반복 변수 i = 1; i <= 5; i += 1 {
-    만약 i % 2 == 0 {
-        출력(형식("{0} 은 짝수", i))
-    } 아니면 {
-        출력(형식("{0} 은 홀수", i))
-    }
-}`,
-    struct: `구조 사람 {
+
+    idol: `구조 아이돌 {
     이름: 문자열,
-    나이: 정수
+    그룹: 문자열,
+    데뷔: 정수
 }
 
-변수 p = 사람 { 이름: "홍길동", 나이: 30 }
-출력(형식("이름: {0}, 나이: {1}", p.이름, p.나이))`,
-    closure: `변수 두배 = 함수(x: 정수) { 반환 x * 2 }
-변수 세배 = 함수(x: 정수) { 반환 x * 3 }
+변수 아이유 = 아이돌 { 이름: "아이유", 그룹: "솔로", 데뷔: 2008 }
+변수 지수 = 아이돌 { 이름: "지수", 그룹: "BLACKPINK", 데뷔: 2016 }
+변수 카리나 = 아이돌 { 이름: "카리나", 그룹: "aespa", 데뷔: 2020 }
 
-반복 변수 i = 1; i <= 5; i += 1 {
-    출력(형식("{0} → 2배:{1}, 3배:{2}", i, 두배(i), 세배(i)))
+변수 아이돌들 = [아이유, 지수, 카리나]
+
+반복 변수 i = 0; i < 아이돌들.길이(); i += 1 {
+    변수 활동년수 = 2025 - 아이돌들[i].데뷔
+    출력(형식("{0} ({1}) — 데뷔 {2}년, 활동 {3}년차",
+        아이돌들[i].이름, 아이돌들[i].그룹,
+        아이돌들[i].데뷔, 활동년수))
+}`,
+
+    lyrics: `변수 가사 = "나는 나 너는 너로서 살아가는 것 피할 수 없는 숙명"
+
+출력("=== 가사 분석 ===")
+출력(형식("원문: {0}", 가사))
+출력(형식("글자 수: {0}", 가사.길이()))
+
+변수 단어들 = 가사.분리(" ")
+출력(형식("단어 수: {0}", 단어들.길이()))
+
+출력("")
+출력("단어 목록:")
+반복 변수 i = 0; i < 단어들.길이(); i += 1 {
+    출력(형식("  {0}. {1}", i + 1, 단어들[i]))
 }`
   };
 
