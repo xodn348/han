@@ -23,19 +23,27 @@ mod wasm {
         };
 
         let type_errors = typechecker::check(&program);
-        if !type_errors.is_empty() {
+        let warning_output = if type_errors.is_empty() {
+            String::new()
+        } else {
             let msgs: Vec<String> = type_errors
                 .iter()
-                .map(|e| format!("[타입 에러] {}번째 줄: {}", e.line, e.message))
+                .map(|e| {
+                    if e.line > 0 {
+                        format!("[타입 경고] {}번째 줄: {}", e.line, e.message)
+                    } else {
+                        format!("[타입 경고] {}", e.message)
+                    }
+                })
                 .collect();
-            return msgs.join("\n");
-        }
+            format!("{}\n", msgs.join("\n"))
+        };
 
         match interpreter::interpret(program) {
-            Ok(_) => interpreter::capture_flush(),
+            Ok(_) => format!("{}{}", warning_output, interpreter::capture_flush()),
             Err(e) => {
                 let output = interpreter::capture_flush();
-                format!("{}[런타임 에러] {}", output, e.message)
+                format!("{}{}[런타임 에러] {}", warning_output, output, e.message)
             }
         }
     }
