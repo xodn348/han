@@ -1,40 +1,35 @@
 Output assets/demo.gif
 
 Set Shell "bash"
-Set FontSize 14
-Set FontFamily "Menlo"
-Set Width 900
-Set Height 600
+Set FontSize 16
+Set FontFamily "JetBrainsMono Nerd Font Mono"
+Set Width 700
+Set Height 420
 Set Theme "Dracula"
+Set Padding 20
+
+Hide
+Type "export PATH=/Users/jnnj92/han/target/release:$PATH && export HAN_SIMPLE_BANNER=1"
+Enter
+Sleep 1s
+Show
 
 Type "hgl repl"
 Enter
-Sleep 2s
+Sleep 1.5s
 
-Type '변수 과일 = ["사과", "배", "포도"]'
+Type@50ms '변수 과일 = ["사과", "배", "포도"]'
 Enter
 Sleep 1s
 
-Type "반복 f 안에서 과일 { 출력(f) }"
+Type@50ms "반복 f 안에서 과일 { 출력(f) }"
 Enter
 Sleep 1.5s
 
-Type '출력(과일.길이())'
+Type@50ms "출력(현재시간())"
 Enter
-Sleep 1s
+Sleep 1.5s
 
-Type '변수 점수 = 사전("수학", 95, "영어", 88)'
-Enter
-Sleep 1s
-
-Type '출력(점수["수학"])'
-Enter
-Sleep 1s
-
-Type '출력(현재시간())'
-Enter
-Sleep 1s
-
-Type "나가기"
+Type@50ms "나가기"
 Enter
 Sleep 1s
