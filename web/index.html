@@ -168,8 +168,8 @@
       <button class="example-btn" onclick="loadExample('golden')">Golden</button>
       <button class="example-btn" onclick="loadExample('koreanage')">한국 나이</button>
       <button class="example-btn" onclick="loadExample('bmi')">BMI</button>
-      <button class="example-btn" onclick="loadExample('euclid')">유클리드</button>
       <button class="example-btn" onclick="loadExample('binary')">이진탐색</button>
+      <button class="example-btn" onclick="loadExample('euclid')">유클리드</button>
     </div>
   </div>
 
@@ -310,7 +310,7 @@
 출력(형식("만 나이 (생일 전): {0}세", 만나이(출생년도, 거짓)))
 출력(형식("만 나이 (생일 후): {0}세", 만나이(출생년도, 참)))`,
 
-    bmi: `함수 bmi(몸무게: 실수, 키: 실수) -> 실수 {
+    bmi: `함수 bmi계산(몸무게: 실수, 키: 실수) -> 실수 {
     변수 키m = 키 / 100.0
     반환 몸무게 / (키m * 키m)
 }
@@ -327,8 +327,8 @@
     }
 }
 
-변수 지수 = bmi(70.0, 175.0)
-출력(형식("키 175cm  몸무게 70kg"))
+변수 지수 = bmi계산(70.0, 175.0)
+출력("키 175cm  몸무게 70kg")
 출력(형식("BMI: {0}", 지수))
 출력(형식("판정: {0}", 판정(지수)))`
   };
