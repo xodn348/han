@@ -1,4 +1,5 @@
 mod ast;
+mod builtins;
 mod codegen;
 mod interpreter;
 mod lexer;
@@ -35,13 +36,10 @@ fn run_pipeline(source: &str) -> ast::Program {
             let type_errors = typechecker::check(&program);
             for err in &type_errors {
                 if err.line > 0 {
-                    eprintln!("[타입 에러] {}번째 줄: {}", err.line, err.message);
+                    eprintln!("[타입 경고] {}번째 줄: {}", err.line, err.message);
                 } else {
-                    eprintln!("[타입 에러] {}", err.message);
+                    eprintln!("[타입 경고] {}", err.message);
                 }
-            }
-            if !type_errors.is_empty() {
-                process::exit(1);
             }
             program
         }

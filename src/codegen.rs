@@ -10,6 +10,9 @@ pub struct CodeGen {
     loop_stack: Vec<(String, String)>,
     var_types: HashMap<String, &'static str>,
     struct_defs: HashMap<String, Vec<String>>,
+    enum_defs: HashMap<String, Vec<String>>,
+    current_error_flag: Option<String>,
+    current_error_message: Option<String>,
 }
 
 impl CodeGen {
@@ -23,7 +26,26 @@ impl CodeGen {
             loop_stack: Vec::new(),
             var_types: HashMap::new(),
             struct_defs: HashMap::new(),
+            enum_defs: HashMap::new(),
+            current_error_flag: None,
+            current_error_message: None,
         }
+    }
+
+    fn sanitize_ident(name: &str) -> String {
+        name.chars()
+            .map(|c| {
+                if c.is_ascii_alphanumeric() || c == '_' {
+                    c.to_string()
+                } else {
+                    format!("u{:04X}", c as u32)
+                }
+            })
+            .collect()
+    }
+
+    fn var_ptr(name: &str) -> String {
+        format!("%var_{}", Self::sanitize_ident(name))
     }
 
     fn fresh_temp(&mut self) -> String {
@@ -104,6 +126,7 @@ impl CodeGen {
             Expr::Identifier(name) => self.var_types.get(name.as_str()).copied().unwrap_or("i64"),
             Expr::Call { name, .. } => self.var_types.get(name.as_str()).copied().unwrap_or("i64"),
             Expr::ArrayLiteral(_) => "i64*",
+            Expr::Range { .. } => "i64*",
             Expr::Index { .. } => "i64",
             _ => "i64",
         }
@@ -112,6 +135,396 @@ impl CodeGen {
     fn emit(&mut self, line: &str) {
         self.output.push_str(line);
         self.output.push('\n');
+    }
+
+    fn gen_string_ptr_literal(&mut self, s: &str) -> String {
+        let (name, len) = self.intern_string(s);
+        let ptr = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = getelementptr inbounds [{} x i8], [{} x i8]* {}, i32 0, i32 0",
+            ptr, len, len, name
+        ));
+        ptr
+    }
+
+    fn init_error_state(&mut self) {
+        self.current_error_flag = Some("%error_flag".to_string());
+        self.current_error_message = Some("%error_message".to_string());
+        self.emit("  %error_flag = alloca i1");
+        self.emit("  store i1 0, i1* %error_flag");
+        self.emit("  %error_message = alloca i8*");
+        self.emit("  store i8* null, i8** %error_message");
+    }
+
+    fn clear_error_state(&mut self) {
+        if let Some(flag_ptr) = self.current_error_flag.clone() {
+            self.emit(&format!("  store i1 0, i1* {}", flag_ptr));
+        }
+        if let Some(message_ptr) = self.current_error_message.clone() {
+            self.emit(&format!("  store i8* null, i8** {}", message_ptr));
+        }
+    }
+
+    fn record_runtime_error(&mut self, message: &str) {
+        if let Some(flag_ptr) = self.current_error_flag.clone() {
+            self.emit(&format!("  store i1 1, i1* {}", flag_ptr));
+        }
+        if let Some(message_ptr) = self.current_error_message.clone() {
+            let ptr = self.gen_string_ptr_literal(message);
+            self.emit(&format!("  store i8* {}, i8** {}", ptr, message_ptr));
+        }
+    }
+
+    fn allocate_array_storage(&mut self, len: &str) -> String {
+        let total_slots = self.fresh_temp();
+        self.emit(&format!("  {} = add nsw i64 {}, 1", total_slots, len));
+
+        let byte_size = self.fresh_temp();
+        self.emit(&format!("  {} = mul nsw i64 {}, 8", byte_size, total_slots));
+
+        let mem = self.fresh_temp();
+        self.emit(&format!("  {} = call i8* @malloc(i64 {})", mem, byte_size));
+
+        let header_ptr = self.fresh_temp();
+        self.emit(&format!("  {} = bitcast i8* {} to i64*", header_ptr, mem));
+        self.emit(&format!("  store i64 {}, i64* {}", len, header_ptr));
+
+        let data_ptr = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = getelementptr inbounds i64, i64* {}, i64 1",
+            data_ptr, header_ptr
+        ));
+        data_ptr
+    }
+
+    fn load_array_length(&mut self, data_ptr: &str) -> String {
+        let len_ptr = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = getelementptr inbounds i64, i64* {}, i64 -1",
+            len_ptr, data_ptr
+        ));
+
+        let len = self.fresh_temp();
+        self.emit(&format!("  {} = load i64, i64* {}", len, len_ptr));
+        len
+    }
+
+    fn gen_checked_int_div_or_mod(
+        &mut self,
+        op: &BinaryOpKind,
+        left: &Expr,
+        right: &Expr,
+    ) -> String {
+        let lv = self.gen_expr(left);
+        let rv = self.gen_expr(right);
+        let result_ptr = self.fresh_temp();
+        self.emit(&format!("  {} = alloca i64", result_ptr));
+        self.emit(&format!("  store i64 0, i64* {}", result_ptr));
+
+        let is_zero = self.fresh_temp();
+        self.emit(&format!("  {} = icmp eq i64 {}, 0", is_zero, rv));
+
+        let idx = self.fresh_label();
+        let error_lbl = format!("arith_error{}", idx);
+        let ok_lbl = format!("arith_ok{}", idx);
+        let end_lbl = format!("arith_end{}", idx);
+
+        self.emit(&format!(
+            "  br i1 {}, label %{}, label %{}",
+            is_zero, error_lbl, ok_lbl
+        ));
+
+        self.emit(&format!("{}:", error_lbl));
+        let message = if matches!(op, BinaryOpKind::Div) {
+            "0으로 나눌 수 없습니다"
+        } else {
+            "0으로 나머지 연산 불가"
+        };
+        self.record_runtime_error(message);
+        self.emit(&format!("  br label %{}", end_lbl));
+
+        self.emit(&format!("{}:", ok_lbl));
+        let result = self.fresh_temp();
+        let instr = if matches!(op, BinaryOpKind::Div) {
+            format!("sdiv i64 {}, {}", lv, rv)
+        } else {
+            format!("srem i64 {}, {}", lv, rv)
+        };
+        self.emit(&format!("  {} = {}", result, instr));
+        self.emit(&format!("  store i64 {}, i64* {}", result, result_ptr));
+        self.emit(&format!("  br label %{}", end_lbl));
+
+        self.emit(&format!("{}:", end_lbl));
+        let final_result = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = load i64, i64* {}",
+            final_result, result_ptr
+        ));
+        final_result
+    }
+
+    fn gen_checked_index_load(&mut self, object: &Expr, index: &Expr) -> String {
+        let arr_ptr = self.gen_expr(object);
+        let idx = self.gen_expr(index);
+        let len = self.load_array_length(&arr_ptr);
+        let result_ptr = self.fresh_temp();
+        self.emit(&format!("  {} = alloca i64", result_ptr));
+        self.emit(&format!("  store i64 0, i64* {}", result_ptr));
+
+        let is_non_negative = self.fresh_temp();
+        self.emit(&format!("  {} = icmp sge i64 {}, 0", is_non_negative, idx));
+        let is_before_end = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = icmp slt i64 {}, {}",
+            is_before_end, idx, len
+        ));
+        let in_bounds = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = and i1 {}, {}",
+            in_bounds, is_non_negative, is_before_end
+        ));
+
+        let block_id = self.fresh_label();
+        let ok_lbl = format!("index_ok{}", block_id);
+        let error_lbl = format!("index_error{}", block_id);
+        let end_lbl = format!("index_end{}", block_id);
+
+        self.emit(&format!(
+            "  br i1 {}, label %{}, label %{}",
+            in_bounds, ok_lbl, error_lbl
+        ));
+
+        self.emit(&format!("{}:", ok_lbl));
+        let elem_ptr = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
+            elem_ptr, arr_ptr, idx
+        ));
+        let value = self.fresh_temp();
+        self.emit(&format!("  {} = load i64, i64* {}", value, elem_ptr));
+        self.emit(&format!("  store i64 {}, i64* {}", value, result_ptr));
+        self.emit(&format!("  br label %{}", end_lbl));
+
+        self.emit(&format!("{}:", error_lbl));
+        self.record_runtime_error("인덱스 범위 초과");
+        self.emit(&format!("  br label %{}", end_lbl));
+
+        self.emit(&format!("{}:", end_lbl));
+        let result = self.fresh_temp();
+        self.emit(&format!("  {} = load i64, i64* {}", result, result_ptr));
+        result
+    }
+
+    fn gen_checked_index_store(&mut self, object: &Expr, index: &Expr, value: &Expr) -> String {
+        let arr_ptr = self.gen_expr(object);
+        let idx = self.gen_expr(index);
+        let val = self.gen_expr(value);
+        let len = self.load_array_length(&arr_ptr);
+        let result_ptr = self.fresh_temp();
+        self.emit(&format!("  {} = alloca i64", result_ptr));
+        self.emit(&format!("  store i64 {}, i64* {}", val, result_ptr));
+
+        let is_non_negative = self.fresh_temp();
+        self.emit(&format!("  {} = icmp sge i64 {}, 0", is_non_negative, idx));
+        let is_before_end = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = icmp slt i64 {}, {}",
+            is_before_end, idx, len
+        ));
+        let in_bounds = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = and i1 {}, {}",
+            in_bounds, is_non_negative, is_before_end
+        ));
+
+        let block_id = self.fresh_label();
+        let ok_lbl = format!("index_store_ok{}", block_id);
+        let error_lbl = format!("index_store_error{}", block_id);
+        let end_lbl = format!("index_store_end{}", block_id);
+
+        self.emit(&format!(
+            "  br i1 {}, label %{}, label %{}",
+            in_bounds, ok_lbl, error_lbl
+        ));
+
+        self.emit(&format!("{}:", ok_lbl));
+        let elem_ptr = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
+            elem_ptr, arr_ptr, idx
+        ));
+        self.emit(&format!("  store i64 {}, i64* {}", val, elem_ptr));
+        self.emit(&format!("  br label %{}", end_lbl));
+
+        self.emit(&format!("{}:", error_lbl));
+        self.record_runtime_error("인덱스 범위 초과");
+        self.emit(&format!("  br label %{}", end_lbl));
+
+        self.emit(&format!("{}:", end_lbl));
+        let result = self.fresh_temp();
+        self.emit(&format!("  {} = load i64, i64* {}", result, result_ptr));
+        result
+    }
+
+    fn gen_range_expr(&mut self, start: &Expr, end: &Expr) -> String {
+        let start_val = self.gen_expr(start);
+        let end_val = self.gen_expr(end);
+        let raw_len = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = sub nsw i64 {}, {}",
+            raw_len, end_val, start_val
+        ));
+
+        let is_negative = self.fresh_temp();
+        self.emit(&format!("  {} = icmp slt i64 {}, 0", is_negative, raw_len));
+        let len = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = select i1 {}, i64 0, i64 {}",
+            len, is_negative, raw_len
+        ));
+
+        let data_ptr = self.allocate_array_storage(&len);
+        let idx_ptr = self.fresh_temp();
+        self.emit(&format!("  {} = alloca i64", idx_ptr));
+        self.emit(&format!("  store i64 0, i64* {}", idx_ptr));
+
+        let block_id = self.fresh_label();
+        let cond_lbl = format!("range_cond{}", block_id);
+        let body_lbl = format!("range_body{}", block_id);
+        let end_lbl = format!("range_end{}", block_id);
+
+        self.emit(&format!("  br label %{}", cond_lbl));
+        self.emit(&format!("{}:", cond_lbl));
+        let idx = self.fresh_temp();
+        self.emit(&format!("  {} = load i64, i64* {}", idx, idx_ptr));
+        let has_more = self.fresh_temp();
+        self.emit(&format!("  {} = icmp slt i64 {}, {}", has_more, idx, len));
+        self.emit(&format!(
+            "  br i1 {}, label %{}, label %{}",
+            has_more, body_lbl, end_lbl
+        ));
+
+        self.emit(&format!("{}:", body_lbl));
+        let value = self.fresh_temp();
+        self.emit(&format!("  {} = add nsw i64 {}, {}", value, start_val, idx));
+        let elem_ptr = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
+            elem_ptr, data_ptr, idx
+        ));
+        self.emit(&format!("  store i64 {}, i64* {}", value, elem_ptr));
+        let next_idx = self.fresh_temp();
+        self.emit(&format!("  {} = add nsw i64 {}, 1", next_idx, idx));
+        self.emit(&format!("  store i64 {}, i64* {}", next_idx, idx_ptr));
+        self.emit(&format!("  br label %{}", cond_lbl));
+
+        self.emit(&format!("{}:", end_lbl));
+        data_ptr
+    }
+
+    fn gen_for_in_stmt(&mut self, var_name: &str, iterable: &Expr, body: &[Stmt]) {
+        let data_ptr = self.gen_expr(iterable);
+        let len = self.load_array_length(&data_ptr);
+        let idx_ptr = self.fresh_temp();
+        self.emit(&format!("  {} = alloca i64", idx_ptr));
+        self.emit(&format!("  store i64 0, i64* {}", idx_ptr));
+
+        let var_ptr_name = Self::var_ptr(var_name);
+        if !self.var_types.contains_key(var_name) {
+            self.emit(&format!("  {} = alloca i64", var_ptr_name));
+        }
+        self.var_types.insert(var_name.to_string(), "i64");
+
+        let loop_id = self.fresh_label();
+        let cond_lbl = format!("loop_cond{}", loop_id);
+        let body_lbl = format!("loop_body{}", loop_id);
+        let end_lbl = format!("loop_end{}", loop_id);
+
+        self.emit(&format!("  br label %{}", cond_lbl));
+        self.emit(&format!("{}:", cond_lbl));
+        let idx = self.fresh_temp();
+        self.emit(&format!("  {} = load i64, i64* {}", idx, idx_ptr));
+        let has_more = self.fresh_temp();
+        self.emit(&format!("  {} = icmp slt i64 {}, {}", has_more, idx, len));
+        self.emit(&format!(
+            "  br i1 {}, label %{}, label %{}",
+            has_more, body_lbl, end_lbl
+        ));
+
+        self.emit(&format!("{}:", body_lbl));
+        let elem_ptr = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
+            elem_ptr, data_ptr, idx
+        ));
+        let elem_val = self.fresh_temp();
+        self.emit(&format!("  {} = load i64, i64* {}", elem_val, elem_ptr));
+        self.emit(&format!("  store i64 {}, i64* {}", elem_val, var_ptr_name));
+
+        self.loop_stack.push((cond_lbl.clone(), end_lbl.clone()));
+        for stmt in body {
+            self.gen_stmt(stmt);
+        }
+        self.loop_stack.pop();
+
+        let next_idx = self.fresh_temp();
+        self.emit(&format!("  {} = add nsw i64 {}, 1", next_idx, idx));
+        self.emit(&format!("  store i64 {}, i64* {}", next_idx, idx_ptr));
+        self.emit(&format!("  br label %{}", cond_lbl));
+        self.emit(&format!("{}:", end_lbl));
+    }
+
+    fn gen_try_catch_stmt(&mut self, try_block: &[Stmt], error_name: &str, catch_block: &[Stmt]) {
+        let try_id = self.fresh_label();
+        let catch_lbl = format!("catch{}", try_id);
+        let end_lbl = format!("try_end{}", try_id);
+
+        self.clear_error_state();
+
+        if try_block.is_empty() {
+            self.emit(&format!("  br label %{}", end_lbl));
+        } else {
+            let first_lbl = format!("try_stmt{}_0", try_id);
+            self.emit(&format!("  br label %{}", first_lbl));
+
+            for (index, stmt) in try_block.iter().enumerate() {
+                let stmt_lbl = format!("try_stmt{}_{}", try_id, index);
+                let next_lbl = if index + 1 < try_block.len() {
+                    format!("try_stmt{}_{}", try_id, index + 1)
+                } else {
+                    end_lbl.clone()
+                };
+
+                self.emit(&format!("{}:", stmt_lbl));
+                self.gen_stmt(stmt);
+                let error_flag = self.fresh_temp();
+                self.emit(&format!("  {} = load i1, i1* %error_flag", error_flag));
+                self.emit(&format!(
+                    "  br i1 {}, label %{}, label %{}",
+                    error_flag, catch_lbl, next_lbl
+                ));
+            }
+        }
+
+        self.emit(&format!("{}:", catch_lbl));
+        let error_var = Self::var_ptr(error_name);
+        if !self.var_types.contains_key(error_name) {
+            self.emit(&format!("  {} = alloca i8*", error_var));
+        }
+        self.var_types.insert(error_name.to_string(), "i8*");
+        let error_value = self.fresh_temp();
+        self.emit(&format!(
+            "  {} = load i8*, i8** %error_message",
+            error_value
+        ));
+        self.emit(&format!("  store i8* {}, i8** {}", error_value, error_var));
+        self.clear_error_state();
+        for stmt in catch_block {
+            self.gen_stmt(stmt);
+        }
+        self.emit(&format!("  br label %{}", end_lbl));
+
+        self.emit(&format!("{}:", end_lbl));
     }
 
     fn gen_expr(&mut self, expr: &Expr) -> String {
@@ -150,8 +563,11 @@ impl CodeGen {
                 let var_ty = self.var_types.get(name.as_str()).copied().unwrap_or("i64");
                 let t = self.fresh_temp();
                 self.emit(&format!(
-                    "  {} = load {}, {}* %var_{}",
-                    t, var_ty, var_ty, name
+                    "  {} = load {}, {}* {}",
+                    t,
+                    var_ty,
+                    var_ty,
+                    Self::var_ptr(name)
                 ));
                 t
             }
@@ -159,8 +575,11 @@ impl CodeGen {
                 let var_ty = self.var_types.get(name.as_str()).copied().unwrap_or("i64");
                 let val = self.gen_expr(value);
                 self.emit(&format!(
-                    "  store {} {}, {}* %var_{}",
-                    var_ty, val, var_ty, name
+                    "  store {} {}, {}* {}",
+                    var_ty,
+                    val,
+                    var_ty,
+                    Self::var_ptr(name)
                 ));
                 val
             }
@@ -170,6 +589,10 @@ impl CodeGen {
                 // i8* + i8* → string concatenation via C runtime
                 if matches!(op, BinaryOpKind::Add) && lty == "i8*" {
                     return self.gen_str_concat(left, right);
+                }
+
+                if lty != "double" && matches!(op, BinaryOpKind::Div | BinaryOpKind::Mod) {
+                    return self.gen_checked_int_div_or_mod(op, left, right);
                 }
 
                 let lv = self.gen_expr(left);
@@ -237,25 +660,25 @@ impl CodeGen {
                     .map(|(ty, v)| format!("{} {}", ty, v))
                     .collect::<Vec<_>>()
                     .join(", ");
-                self.emit(&format!("  {} = call {} @{}({})", t, ret_ty, name, arg_str));
+                self.emit(&format!(
+                    "  {} = call {} @{}({})",
+                    t,
+                    ret_ty,
+                    Self::sanitize_ident(name),
+                    arg_str
+                ));
                 t
             }
             Expr::ArrayLiteral(elems) => {
-                let count = elems.len();
-                let byte_size = count * 8;
+                let len_value = elems.len().to_string();
+                let data_ptr = self.allocate_array_storage(&len_value);
 
-                let mem = self.fresh_temp();
-                self.emit(&format!("  {} = call i8* @malloc(i64 {})", mem, byte_size));
-
-                let data_ptr = self.fresh_temp();
-                self.emit(&format!("  {} = bitcast i8* {} to i64*", data_ptr, mem));
-
-                for (i, elem) in elems.iter().enumerate() {
+                for (index, elem) in elems.iter().enumerate() {
                     let val = self.gen_expr(elem);
                     let elem_ptr = self.fresh_temp();
                     self.emit(&format!(
                         "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
-                        elem_ptr, data_ptr, i
+                        elem_ptr, data_ptr, index
                     ));
                     self.emit(&format!("  store i64 {}, i64* {}", val, elem_ptr));
                 }
@@ -263,35 +686,13 @@ impl CodeGen {
                 data_ptr
             }
 
-            Expr::Index { object, index } => {
-                let arr_ptr = self.gen_expr(object);
-                let idx = self.gen_expr(index);
-                let elem_ptr = self.fresh_temp();
-                self.emit(&format!(
-                    "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
-                    elem_ptr, arr_ptr, idx
-                ));
-                let val = self.fresh_temp();
-                self.emit(&format!("  {} = load i64, i64* {}", val, elem_ptr));
-                val
-            }
+            Expr::Index { object, index } => self.gen_checked_index_load(object, index),
 
             Expr::IndexAssign {
                 object,
                 index,
                 value,
-            } => {
-                let arr_ptr = self.gen_expr(object);
-                let idx = self.gen_expr(index);
-                let val = self.gen_expr(value);
-                let elem_ptr = self.fresh_temp();
-                self.emit(&format!(
-                    "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
-                    elem_ptr, arr_ptr, idx
-                ));
-                self.emit(&format!("  store i64 {}, i64* {}", val, elem_ptr));
-                val
-            }
+            } => self.gen_checked_index_store(object, index, value),
 
             Expr::StructLiteral { name, fields } => {
                 let field_defs = self.struct_defs.get(name).cloned().unwrap_or_default();
@@ -346,8 +747,8 @@ impl CodeGen {
                 val
             }
 
-            Expr::Range { .. }
-            | Expr::MethodCall { .. }
+            Expr::Range { start, end } => self.gen_range_expr(start, end),
+            Expr::MethodCall { .. }
             | Expr::Lambda { .. }
             | Expr::TupleLiteral(_)
             | Expr::TupleIndex { .. }
@@ -357,6 +758,15 @@ impl CodeGen {
                 t
             }
         }
+    }
+
+    fn resolve_enum_tag(&self, variant: &str) -> Option<usize> {
+        for (_enum_name, variants) in &self.enum_defs {
+            if let Some(pos) = variants.iter().position(|v| v == variant) {
+                return Some(pos);
+            }
+        }
+        None
     }
 
     fn find_field_index(&self, object: &Expr, field: &str) -> usize {
@@ -474,11 +884,14 @@ impl CodeGen {
                     .map(|t| Self::llvm_type(t))
                     .unwrap_or_else(|| self.infer_type(value));
                 self.var_types.insert(name.clone(), llvm_ty);
-                self.emit(&format!("  %var_{} = alloca {}", name, llvm_ty));
+                self.emit(&format!("  {} = alloca {}", Self::var_ptr(name), llvm_ty));
                 let val = self.gen_expr(value);
                 self.emit(&format!(
-                    "  store {} {}, {}* %var_{}",
-                    llvm_ty, val, llvm_ty, name
+                    "  store {} {}, {}* {}",
+                    llvm_ty,
+                    val,
+                    llvm_ty,
+                    Self::var_ptr(name)
                 ));
             }
             StmtKind::ExprStmt(expr) => {
@@ -607,17 +1020,26 @@ impl CodeGen {
             }
             StmtKind::TryCatch {
                 try_block,
+                error_name,
                 catch_block,
-                ..
-            } => {
-                for s in try_block {
-                    self.gen_stmt(s);
-                }
-                for s in catch_block {
-                    self.gen_stmt(s);
+            } => self.gen_try_catch_stmt(try_block, error_name, catch_block),
+            StmtKind::Import(path) => {
+                if let Ok(source) = std::fs::read_to_string(path) {
+                    let tokens = crate::lexer::tokenize(&source);
+                    if let Ok(program) = crate::parser::parse(tokens) {
+                        for stmt in &program.stmts {
+                            match &stmt.kind {
+                                StmtKind::FuncDef { .. }
+                                | StmtKind::StructDef { .. }
+                                | StmtKind::EnumDef { .. } => {
+                                    self.gen_stmt(stmt);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
                 }
             }
-            StmtKind::Import(_) => {}
             StmtKind::Match { expr, arms } => {
                 let val = self.gen_expr(expr);
                 let end_lbl = format!("match_end{}", self.fresh_label());
@@ -631,8 +1053,29 @@ impl CodeGen {
                     };
 
                     match &arm.pattern {
-                        crate::ast::Pattern::Wildcard | crate::ast::Pattern::Identifier(_) => {
+                        crate::ast::Pattern::Wildcard => {
                             self.emit(&format!("  br label %{}", arm_lbl));
+                        }
+                        crate::ast::Pattern::Identifier(variant_name) => {
+                            let tag = self.resolve_enum_tag(variant_name);
+                            if let Some(tag_val) = tag {
+                                let tag_tmp = self.fresh_temp();
+                                self.emit(&format!(
+                                    "  {} = extractvalue {{ i64, i64 }} {}, 0",
+                                    tag_tmp, val
+                                ));
+                                let cmp = self.fresh_temp();
+                                self.emit(&format!(
+                                    "  {} = icmp eq i64 {}, {}",
+                                    cmp, tag_tmp, tag_val
+                                ));
+                                self.emit(&format!(
+                                    "  br i1 {}, label %{}, label %{}",
+                                    cmp, arm_lbl, next_lbl
+                                ));
+                            } else {
+                                self.emit(&format!("  br label %{}", arm_lbl));
+                            }
                         }
                         crate::ast::Pattern::IntLiteral(n) => {
                             let cmp = self.fresh_temp();
@@ -675,13 +1118,14 @@ impl CodeGen {
                 self.emit(&format!("{}:", end_lbl));
             }
             StmtKind::ImplBlock { .. } => {}
-            StmtKind::EnumDef { .. } => {}
-            StmtKind::ForIn { iterable, body, .. } => {
-                self.gen_expr(iterable);
-                for s in body {
-                    self.gen_stmt(s);
-                }
+            StmtKind::EnumDef { name, variants } => {
+                self.enum_defs.insert(name.clone(), variants.clone());
             }
+            StmtKind::ForIn {
+                var_name,
+                iterable,
+                body,
+            } => self.gen_for_in_stmt(var_name, iterable, body),
         }
     }
 
@@ -699,21 +1143,32 @@ impl CodeGen {
 
         let param_str = params
             .iter()
-            .map(|(pname, pty)| format!("{} %{}", Self::llvm_type(pty), pname))
+            .map(|(pname, pty)| {
+                format!("{} %{}", Self::llvm_type(pty), Self::sanitize_ident(pname))
+            })
             .collect::<Vec<_>>()
             .join(", ");
 
         self.var_types.clear();
-        self.emit(&format!("define {} @{}({}) {{", ret_ty, name, param_str));
+        self.emit(&format!(
+            "define {} @{}({}) {{",
+            ret_ty,
+            Self::sanitize_ident(name),
+            param_str
+        ));
         self.emit("entry:");
+        self.init_error_state();
 
         for (pname, pty) in params {
             let llvm_ty = Self::llvm_type(pty);
             self.var_types.insert(pname.clone(), llvm_ty);
-            self.emit(&format!("  %var_{} = alloca {}", pname, llvm_ty));
+            self.emit(&format!("  {} = alloca {}", Self::var_ptr(pname), llvm_ty));
             self.emit(&format!(
-                "  store {} %{}, {}* %var_{}",
-                llvm_ty, pname, llvm_ty, pname
+                "  store {} %{}, {}* {}",
+                llvm_ty,
+                Self::sanitize_ident(pname),
+                llvm_ty,
+                Self::var_ptr(pname)
             ));
         }
 
@@ -731,6 +1186,8 @@ impl CodeGen {
 
         self.emit("}");
         self.emit("");
+        self.current_error_flag = None;
+        self.current_error_message = None;
     }
 
     pub fn generate(&mut self, program: &Program) -> String {
@@ -780,12 +1237,15 @@ impl CodeGen {
         if !top_level.is_empty() && !has_main {
             self.emit("define i32 @main() {");
             self.emit("entry:");
+            self.init_error_state();
             for stmt in &top_level {
                 self.gen_stmt(stmt);
             }
             self.emit("  ret i32 0");
             self.emit("}");
             self.emit("");
+            self.current_error_flag = None;
+            self.current_error_message = None;
         }
 
         let mut module = String::new();
@@ -901,5 +1361,84 @@ mod tests {
         let ir = codegen(&program);
         assert!(ir.contains("; Han Language Generated IR"));
         assert!(ir.contains("declare i32 @printf"));
+    }
+
+    #[test]
+    fn test_codegen_for_in_reads_array_length_from_header() {
+        let program = Program::new(vec![Stmt::unspanned(StmtKind::ForIn {
+            var_name: "i".to_string(),
+            iterable: Expr::Range {
+                start: Box::new(Expr::IntLiteral(0)),
+                end: Box::new(Expr::IntLiteral(5)),
+            },
+            body: vec![Stmt::unspanned(StmtKind::ExprStmt(Expr::Call {
+                name: "출력".to_string(),
+                args: vec![Expr::Identifier("i".to_string())],
+            }))],
+        })]);
+        let ir = codegen(&program);
+        assert!(ir.contains("i64 -1"));
+        assert!(ir.contains("loop_cond"));
+        assert!(ir.contains("load i64, i64* %"));
+    }
+
+    #[test]
+    fn test_codegen_try_catch_uses_error_branching() {
+        let program = Program::new(vec![Stmt::unspanned(StmtKind::TryCatch {
+            try_block: vec![Stmt::unspanned(StmtKind::VarDecl {
+                name: "x".to_string(),
+                ty: Some(Type::정수),
+                value: Expr::BinaryOp {
+                    op: BinaryOpKind::Div,
+                    left: Box::new(Expr::IntLiteral(1)),
+                    right: Box::new(Expr::IntLiteral(0)),
+                },
+                mutable: true,
+            })],
+            error_name: "오류".to_string(),
+            catch_block: vec![make_print_call("caught")],
+        })]);
+        let ir = codegen(&program);
+        assert!(ir.contains("catch"));
+        assert!(ir.contains("store i1 1, i1* %error_flag"));
+        assert!(ir.contains("load i1, i1* %error_flag"));
+    }
+
+    #[test]
+    fn test_codegen_enum_match_switches_on_enum_tag() {
+        let program = Program::new(vec![
+            Stmt::unspanned(StmtKind::EnumDef {
+                name: "Direction".to_string(),
+                variants: vec!["Up".to_string(), "Down".to_string()],
+            }),
+            Stmt::unspanned(StmtKind::VarDecl {
+                name: "dir".to_string(),
+                ty: None,
+                value: Expr::Identifier("Direction::Down".to_string()),
+                mutable: true,
+            }),
+            Stmt::unspanned(StmtKind::Match {
+                expr: Expr::Identifier("dir".to_string()),
+                arms: vec![
+                    crate::ast::MatchArm {
+                        pattern: crate::ast::Pattern::Identifier("Up".to_string()),
+                        body: vec![make_print_call("up")],
+                    },
+                    crate::ast::MatchArm {
+                        pattern: crate::ast::Pattern::Identifier("Down".to_string()),
+                        body: vec![make_print_call("down")],
+                    },
+                    crate::ast::MatchArm {
+                        pattern: crate::ast::Pattern::Wildcard,
+                        body: vec![make_print_call("default")],
+                    },
+                ],
+            }),
+        ]);
+        let ir = codegen(&program);
+        assert!(ir.contains("{ i64, i64 }"));
+        assert!(ir.contains("extractvalue { i64, i64 }"));
+        assert!(ir.contains("icmp eq i64"));
+        assert!(ir.contains("match_arm"));
     }
 }
