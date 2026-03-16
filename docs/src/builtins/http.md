@@ -5,7 +5,7 @@ Powered by Rust's `reqwest` crate (blocking mode).
 ## GET Request
 
 ```
-변수 응답 = HTTP_가져오기("https://httpbin.org/get")
+변수 응답 = HTTP_포함("https://httpbin.org/get")
 출력(응답)
 ```
 
@@ -23,8 +23,8 @@ POST sends with `Content-Type: application/json`. If the body is not a string, i
 
 ```
 시도 {
-    변수 응답 = HTTP_가져오기("https://invalid-url.example")
-} 실패(오류) {
+    변수 응답 = HTTP_포함("https://invalid-url.example")
+} 처리(오류) {
     출력(형식("HTTP 오류: {0}", 오류))
 }
 ```
@@ -33,5 +33,5 @@ POST sends with `Content-Type: application/json`. If the body is not a string, i
 
 | Function | Description |
 |----------|-------------|
-| `HTTP_가져오기(url)` | GET request → response body as string |
+| `HTTP_포함(url)` | GET request → response body as string |
 | `HTTP_보내기(url, body)` | POST request with JSON body → response as string |

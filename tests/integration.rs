@@ -129,7 +129,7 @@ fn test_compiled_backend_array_for_in_outputs_items() {
 #[test]
 fn test_compiled_backend_try_catch_handles_division_by_zero() {
     let out = build_and_run(
-        "시도 {\n    변수 result = 1 / 0\n    출력(111)\n} 실패(err) {\n    출력(222)\n}\n",
+        "시도 {\n    변수 result = 1 / 0\n    출력(111)\n} 처리(err) {\n    출력(222)\n}\n",
         "han_try_catch",
     );
 
@@ -172,7 +172,7 @@ fn test_compiled_backend_enum_match_branches_by_variant_tag() {
     let out = build_and_run(
         "열거 Direction { Up, Down }
 변수 dir = Direction::Down
-맞춰 dir {
+맞춤 dir {
     Up => 출력(11)
     Down => 출력(22)
     _ => 출력(33)

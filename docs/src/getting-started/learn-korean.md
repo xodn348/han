@@ -25,8 +25,8 @@ Every keyword in Han is a real Korean word. If you're learning Korean, writing H
 | `계속` | gye-sok | continue | continue |
 | `시도` | si-do | attempt | try block |
 | `실패` | sil-pae | failure | catch block |
-| `맞춰` | mat-chwo | match/fit | pattern matching |
-| `가져오기` | ga-jyeo-o-gi | bring/import | import module |
+| `맞춤` | mat-chwo | match/fit | pattern matching |
+| `포함` | ga-jyeo-o-gi | bring/import | import module |
 | `안에서` | an-e-seo | inside/within | for-in iteration |
 
 ## Method Names

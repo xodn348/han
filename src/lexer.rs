@@ -20,9 +20,9 @@ pub enum Token {
     입력,
     구조,
     시도,
-    실패,
-    가져오기,
-    맞춰,
+    처리,
+    포함,
+    맞춤,
     열거,
     안에서,
     DotDot,     // ..
@@ -117,9 +117,9 @@ pub fn get_keyword_map() -> HashMap<String, Token> {
     map.insert("입력".to_string(), Token::입력);
     map.insert("구조".to_string(), Token::구조);
     map.insert("시도".to_string(), Token::시도);
-    map.insert("실패".to_string(), Token::실패);
-    map.insert("가져오기".to_string(), Token::가져오기);
-    map.insert("맞춰".to_string(), Token::맞춰);
+    map.insert("처리".to_string(), Token::처리);
+    map.insert("포함".to_string(), Token::포함);
+    map.insert("맞춤".to_string(), Token::맞춤);
     map.insert("구현".to_string(), Token::구현);
     map.insert("열거".to_string(), Token::열거);
     map.insert("안에서".to_string(), Token::안에서);

@@ -144,18 +144,18 @@ impl Parser {
             }
             Token::구조 => self.parse_struct_def(),
             Token::시도 => self.parse_try_catch(),
-            Token::가져오기 => {
+            Token::포함 => {
                 self.advance();
                 let (line, _) = self.peek_pos();
                 match self.advance().clone() {
                     Token::StringLiteral(path) => Ok(Stmt::new(StmtKind::Import(path), span)),
                     tok => Err(ParseError::new(
-                        format!("가져오기 뒤에 문자열 경로 필요, '{:?}' 발견", tok),
+                        format!("포함 뒤에 문자열 경로 필요, '{:?}' 발견", tok),
                         line,
                     )),
                 }
             }
-            Token::맞춰 => self.parse_match(),
+            Token::맞춤 => self.parse_match(),
             Token::구현 => self.parse_impl_block(),
             Token::열거 => self.parse_enum_def(),
             _ => {
@@ -889,7 +889,7 @@ impl Parser {
         let try_block = self.parse_block()?;
         let (line, _) = self.peek_pos();
         match self.peek().clone() {
-            Token::실패 => {
+            Token::처리 => {
                 self.advance();
                 self.expect(&Token::LParen)?;
                 let error_name = match self.advance().clone() {
@@ -913,7 +913,7 @@ impl Parser {
                 ))
             }
             tok => Err(ParseError::new(
-                format!("'실패' 예상, '{:?}' 발견", tok),
+                format!("'처리' 예상, '{:?}' 발견", tok),
                 line,
             )),
         }

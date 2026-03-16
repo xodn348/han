@@ -857,15 +857,15 @@ fn eval_builtin_stdlib(
                 .map_err(|e| RuntimeError::new(format!("JSON 변환 오류: {}", e), line))?;
             Ok(Some(Value::Str(pretty)))
         }
-        "HTTP_가져오기" => {
+        "HTTP_포함" => {
             #[cfg(feature = "native")]
             {
                 if args.len() != 1 {
-                    return Err(RuntimeError::new("HTTP_가져오기: URL 인자 필요", line));
+                    return Err(RuntimeError::new("HTTP_포함: URL 인자 필요", line));
                 }
                 let url = match eval_expr(&args[0], env, line)? {
                     Value::Str(s) => s,
-                    _ => return Err(RuntimeError::new("HTTP_가져오기: 문자열 URL 필요", line)),
+                    _ => return Err(RuntimeError::new("HTTP_포함: 문자열 URL 필요", line)),
                 };
                 let body = reqwest::blocking::get(&url)
                     .map_err(|e| RuntimeError::new(format!("HTTP 오류: {}", e), line))?
@@ -875,7 +875,7 @@ fn eval_builtin_stdlib(
             }
             #[cfg(not(feature = "native"))]
             return Err(RuntimeError::new(
-                "HTTP_가져오기: 플레이그라운드에서 미지원",
+                "HTTP_포함: 플레이그라운드에서 미지원",
                 line,
             ));
         }
@@ -1477,7 +1477,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
 
         StmtKind::Import(path) => {
             let source = std::fs::read_to_string(path)
-                .map_err(|e| RuntimeError::new(format!("가져오기 실패 '{}': {}", path, e), line))?;
+                .map_err(|e| RuntimeError::new(format!("포함 실패 '{}': {}", path, e), line))?;
             let tokens = crate::lexer::tokenize(&source);
             let program = crate::parser::parse(tokens).map_err(|e| {
                 RuntimeError::new(format!("'{}' 파싱 오류: {}", path, e.message), line)

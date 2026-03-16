@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { margin: 0; padding: 30px; background: #1a1b26; display: flex; justify-content: center; }
+.terminal {
+  background: #1a1b26;
+  width: 820px;
+  font-family: 'Menlo', 'SF Mono', monospace;
+  font-size: 13px;
+  line-height: 1.35;
+  padding: 20px;
+}
+.red { color: #ff6b6b; }
+.blue { color: #6b9fff; }
+.dim { color: #565f89; }
+.pink { color: #ce5078; }
+.white { color: #e8e8e8; font-weight: bold; }
+.sub { color: #565f89; }
+.prompt { color: #9ece6a; font-weight: bold; }
+pre { margin: 0; }
+</style>
+</head>
+<body>
+<div class="terminal">
+<pre>
+ <span class="red">◓</span><span class="blue">◒</span><span class="dim"> ─────────────────────────────────── </span><span class="red">◓</span><span class="blue">◒</span>
+
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⣀⣀⣀⣀⣀⡀⠀⠀⠀⠀⠀⢰⣶⡆</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠛⠛⠛⠛⠛⠛⠃⠀⠀⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⣦⣀⣴⠀⠀</span><span class="white">⠀⠀⠀⠀⠀⠀⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⠀⠀</span><span class="white">⠀⠀⠀⠀⠀⠀⠉⠉⠉⠉⠉⠉⣉⠉⠉⠉⠉⠉⠉⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⢿⣶⣤⣀⠀⢻⣿⡟⠀⣠</span><span class="white">⣴⣾⡟⠀⠀⠀⠀⠀⣤⣶⡿⠿⠿⠿⢿⣷⣦⡀⠀⠀⠀⢸⣿⣷⣶⣶⣶</span>
+ <span class="pink">⠀⠀⠀⠲⢿⣿⣿⣿⣷⡄⠋⢰⣿⣿</span><span class="white">⣿⣿⠿⠆⠀⠀⠀⣸⣿⠋⠀⠀⠀⠀⠀⠘⣿⣧⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⣀⣤⣶⠀⣶⣤⡀</span><span class="white">⠀⠀⠀⠀⠀⠀⠀⠸⣿⣦⣀⠀⠀⠀⢀⣴⣿⠏⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⢠⣾⣿⣿⡏⠀⢻⣿⣿</span><span class="white">⣦⡀⠀⠀⠀⠀⠀⠀⠈⠛⠿⠿⠿⠿⠿⠛⠁⠀⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠛⠻⣿⠟⠀⠀⠈⢻⣿</span><span class="white">⠛⠛⠀⠀⠀⠀⠀⠀⠀⣤⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠿⠇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠉</span><span class="white">⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⡄</span>
+
+ <span class="sub">    한글 프로그래밍 언어 v0.1.0</span>
+ <span class="sub">    github.com/xodn348/han</span>
+
+ <span class="red">◓</span><span class="blue">◒</span><span class="dim"> ─────────────────────────────────── </span><span class="red">◓</span><span class="blue">◒</span>
+
+ 종료: Ctrl+D 또는 '나가기' 입력
+
+ <span class="prompt">한&gt;</span> 변수 과일 = ["사과", "배", "포도"]
+ <span class="prompt">한&gt;</span> 반복 f 안에서 과일 { 출력(f) }
+ 사과
+ 배
+ 포도
+ <span class="prompt">한&gt;</span> 출력(현재시간())
+ 2025-03-15 14:30:00
+</pre>
+</div>
+</body>
+</html>
