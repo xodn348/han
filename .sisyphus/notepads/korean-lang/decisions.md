@@ -17,3 +17,7 @@
 
 ## MVP Types
 정수(i64), 실수(f64), 문자열(String), 불(bool), 없음(void)
+
+## 2026-03-16 Warning-only function call validation
+- Kept the type checker as a collector (`Vec<TypeError>`) and switched CLI/WASM callers to render `[타입 경고]` messages instead of exiting early, so static analysis stays advisory.
+- Implemented argument validation by looking up function signatures from `env.funcs` and comparing both arity and inferred argument types at each `Expr::Call`.
