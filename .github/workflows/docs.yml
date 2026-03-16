@@ -3,7 +3,7 @@ name: Deploy Docs
 on:
   push:
     branches: [main]
-    paths: ['docs/**']
+    paths: ['docs/**', 'web/**']
 
 permissions:
   contents: read
@@ -24,6 +24,9 @@ jobs:
 
       - name: Build docs
         run: cd docs && mdbook build
+
+      - name: Copy playground
+        run: cp -r web docs/book/playground
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
