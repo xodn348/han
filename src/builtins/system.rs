@@ -6,7 +6,7 @@ pub const SYSTEM_BUILTINS: &[&str] = &[
     "현재시간",
     "현재날짜",
     "타임스탬프",
-    "HTTP_가져오기",
+    "HTTP_포함",
     "HTTP_보내기",
     "정규식_찾기",
     "정규식_일치",

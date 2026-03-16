@@ -52,17 +52,17 @@ Han is a statically-typed, compiled programming language where every keyword is 
 - **Arrays** — `[1, 2, 3]`, indexing, negative indexing, `.추가/.삭제/.정렬/.역순` etc.
 - **Structs** — `구조 사람 { 이름: 문자열 }` with field access and impl blocks
 - **Closures** — `변수 f = 함수(x: 정수) { 반환 x * 2 }` with env capture
-- **Pattern matching** — `맞춰 값 { 1 => ..., _ => ... }`
-- **Error handling** — `시도 { } 실패(오류) { }` try/catch
+- **Pattern matching** — `맞춤 값 { 1 => ..., _ => ... }`
+- **Error handling** — `시도 { } 처리(오류) { }` try/catch
 - **File I/O** — `파일읽기`, `파일쓰기`, `파일추가`, `파일존재`
 - **Format strings** — `형식("이름: {0}", 이름)` positional or `형식("이름: {이름}")` named
 - **String methods** — `.분리`, `.포함`, `.바꾸기`, `.대문자`, `.소문자`, etc.
-- **Module imports** — `가져오기 "파일.hgl"`
+- **Module imports** — `포함 "파일.hgl"`
 - **Generics syntax** — `함수 최대값<T>(a: T, b: T) -> T`
 - **Built-in math** — `제곱근`, `절댓값`, `거듭제곱`, `정수변환`, `실수변환`, `길이`
 - **HashMap** — `사전("키", 값)` with `.키목록()`, `.값목록()`, `.포함()`, `.삭제()`
 - **JSON** — `제이슨_파싱()`, `제이슨_생성()` via serde_json
-- **HTTP** — `HTTP_가져오기(url)`, `HTTP_보내기(url, body)` via reqwest
+- **HTTP** — `HTTP_포함(url)`, `HTTP_보내기(url, body)` via reqwest
 - **Regex** — `정규식_찾기()`, `정규식_일치()`, `정규식_바꾸기()`
 - **Date/Time** — `현재시간()`, `현재날짜()`, `타임스탬프()`
 - **System** — `실행()`, `환경변수()`, `명령인자()`
@@ -140,7 +140,7 @@ han: 1
     변수 연산자 = 부분[1]
     변수 오른쪽 = 정수변환(부분[2])
 
-    맞춰 연산자 {
+    맞춤 연산자 {
         "+" => { 반환 왼쪽 + 오른쪽 }
         "-" => { 반환 왼쪽 - 오른쪽 }
         "*" => { 반환 왼쪽 * 오른쪽 }
@@ -216,7 +216,7 @@ han: 1
         변수 내용 = 파일읽기(경로)
         변수 줄들 = 내용.분리("\n")
         반환 줄들.길이()
-    } 실패(오류) {
+    } 처리(오류) {
         출력(형식("오류: {0}", 오류))
         반환 0
     }
@@ -293,7 +293,7 @@ hgl lsp                     Start LSP server (hover + completion)
 - `반복 x 안에서 배열` for-in loop — iterates arrays, strings, ranges
 - `동안` while-loop
 - `멈춰` (break), `계속` (continue)
-- `맞춰` pattern matching — integer, string, bool, wildcard `_`, binding
+- `맞춤` pattern matching — integer, string, bool, wildcard `_`, binding
 - Range operator — `0..10` creates `[0, 1, 2, ..., 9]`
 
 **Functions**
@@ -326,7 +326,7 @@ hgl lsp                     Start LSP server (hover + completion)
 - Impl block methods with `자신` (self): `구현 사람 { 함수 인사(자신: 사람) { ... } }`
 
 **Error handling**
-- `시도 { } 실패(오류) { }` — catches any runtime error including division by zero, file not found, out-of-bounds
+- `시도 { } 처리(오류) { }` — catches any runtime error including division by zero, file not found, out-of-bounds
 - Stack traces on function call errors
 
 **Type safety**
@@ -338,7 +338,7 @@ hgl lsp                     Start LSP server (hover + completion)
 - Roundtrip: Han → JSON → Han preserves structure
 
 **HTTP** (reqwest)
-- `HTTP_가져오기(url)` — GET, `HTTP_보내기(url, body)` — POST with JSON
+- `HTTP_포함(url)` — GET, `HTTP_보내기(url, body)` — POST with JSON
 
 **Regex**
 - `정규식_찾기(패턴, 텍스트)`, `정규식_일치()`, `정규식_바꾸기()`
@@ -365,7 +365,7 @@ hgl lsp                     Start LSP server (hover + completion)
 - Positional: `형식("이름: {0}, 나이: {1}", 이름, 나이)`
 
 **Modules**
-- `가져오기 "파일.hgl"` — runs another `.hgl` file in the current scope
+- `포함 "파일.hgl"` — runs another `.hgl` file in the current scope
 
 **Generics syntax**
 - `함수 최대값<T>(a: T, b: T) -> T` — type params are parsed and erased at runtime
@@ -380,7 +380,7 @@ hgl lsp                     Start LSP server (hover + completion)
 - `제이슨_예쁘게(값)` — pretty-printed JSON
 
 **HTTP**
-- `HTTP_가져오기(url)` — GET request, `HTTP_보내기(url, body)` — POST request
+- `HTTP_포함(url)` — GET request, `HTTP_보내기(url, body)` — POST request
 
 **Regex**
 - `정규식_찾기(패턴, 텍스트)`, `정규식_일치(패턴, 텍스트)`, `정규식_바꾸기(패턴, 텍스트, 대체)`

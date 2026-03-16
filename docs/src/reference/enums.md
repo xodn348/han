@@ -26,7 +26,7 @@ Variants are integer values starting from 0.
 ## Pattern Matching with Enums
 
 ```
-맞춰 방향::아래 {
+맞춤 방향::아래 {
     0 => 출력("위")
     1 => 출력("아래")
     _ => 출력("기타")

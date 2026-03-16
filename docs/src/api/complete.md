@@ -27,8 +27,8 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 열거    → enum definition
 시도    → try
 실패    → catch
-맞춰    → match (pattern matching)
-가져오기 → import
+맞춤    → match (pattern matching)
+포함 → import
 참      → true
 거짓    → false
 없음    → null/void
@@ -81,7 +81,7 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 제이슨_파싱(문자열)       → parse JSON → value
 제이슨_생성(값)           → value → JSON string
 제이슨_예쁘게(값)         → value → pretty JSON string
-HTTP_가져오기(url)        → GET request → 문자열
+HTTP_포함(url)        → GET request → 문자열
 HTTP_보내기(url, body)    → POST request → 문자열
 정규식_찾기(패턴, 텍스트)  → find matches → [문자열]
 정규식_일치(패턴, 텍스트)  → test match → 불
@@ -189,7 +189,7 @@ HTTP_보내기(url, body)    → POST request → 문자열
 }
 
 // Match
-맞춰 값 {
+맞춤 값 {
     패턴1 => 결과1
     패턴2 => { ... }
     _ => 기본값
@@ -198,12 +198,12 @@ HTTP_보내기(url, body)    → POST request → 문자열
 // Try/catch
 시도 {
     ...
-} 실패(오류변수) {
+} 처리(오류변수) {
     ...
 }
 
 // Import
-가져오기 "파일.hgl"
+포함 "파일.hgl"
 
 // Closure
 변수 f = 함수(x: 정수) { 반환 x * 2 }

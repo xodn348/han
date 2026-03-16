@@ -3,7 +3,7 @@
 ## Importing Files
 
 ```
-가져오기 "수학도구.hgl"
+포함 "수학도구.hgl"
 ```
 
 This executes the file and imports all its definitions (functions, variables, structs) into the current scope.
@@ -20,6 +20,6 @@ This executes the file and imports all its definitions (functions, variables, st
 
 `main.hgl`:
 ```
-가져오기 "수학도구.hgl"
+포함 "수학도구.hgl"
 출력(최대값(10, 20))    // 20
 ```

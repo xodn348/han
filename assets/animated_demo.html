@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+body { margin: 0; padding: 0; background: #1a1b26; }
+.terminal {
+  background: #1a1b26;
+  width: 780px;
+  font-family: 'Menlo', 'SF Mono', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 24px;
+  color: #a9b1d6;
+}
+.pink { color: #ce5078; }
+.white { color: #e8e8e8; font-weight: bold; }
+.dim { color: #565f89; }
+.red { color: #ff6b6b; }
+.blue { color: #6b9fff; }
+.green { color: #9ece6a; font-weight: bold; }
+.cyan { color: #7dcfff; }
+.prompt { color: #9ece6a; font-weight: bold; }
+pre { margin: 0; font-family: inherit; }
+#typed { display: inline; }
+#cursor { 
+  display: inline-block;
+  width: 8px;
+  height: 16px;
+  background: #a9b1d6;
+  animation: blink 1s step-end infinite;
+}
+@keyframes blink {
+  50% { opacity: 0; }
+}
+</style>
+</head>
+<body>
+<div class="terminal">
+<pre id="output"></pre>
+</div>
+<script>
+const banner = ` <span class="red">◓</span><span class="blue">◒</span><span class="dim"> ─────────────────────────────────── </span><span class="red">◓</span><span class="blue">◒</span>
+
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⣀⣀⣀⣀⣀⣀⡀⠀⠀⠀⠀⠀⢰⣶⡆</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⠛⠛⠛⠛⠛⠛⠃⠀⠀⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⣦⣀⣴⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⣿⣿⣿⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠉⠉⠉⠉⠉⠉⣉⠉⠉⠉⠉⠉⠉⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⢿⣶⣤⣀⠀⢻⣿⡟⠀⣠⣴⣾⡟⠀⠀⠀</span><span class="white">⠀⠀⣤⣶⡿⠿⠿⠿⢿⣷⣦⡀⠀⠀⠀⢸⣿⣷⣶⣶⣶</span>
+ <span class="pink">⠀⠀⠀⠲⢿⣿⣿⣿⣷⡄⠋⢰⣿⣿⣿⣿⠿⠆⠀⠀</span><span class="white">⠀⣸⣿⠋⠀⠀⠀⠀⠀⠘⣿⣧⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⣀⣤⣶⠀⣶⣤⡀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠸⣿⣦⣀⠀⠀⠀⢀⣴⣿⠏⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⢠⣾⣿⣿⡏⠀⢻⣿⣿⣦⡀⠀⠀⠀⠀</span><span class="white">⠀⠀⠈⠛⠿⠿⠿⠿⠿⠛⠁⠀⠀⠀⠀⢸⣿⡇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠛⠻⣿⠟⠀⠀⠈⢻⣿⠛⠛⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⣤⣤⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠸⠿⠇</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠁⠀⠀⠀⠀⠀⠉⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⣿⣿</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⣿⣿⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⣤⡄</span>
+ <span class="pink">⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀</span><span class="white">⠀⠀⠀⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠉⠁</span>
+
+ <span class="dim">    Korean Programming Language v0.1.0</span>
+ <span class="dim">    github.com/xodn348/han</span>
+
+ <span class="red">◓</span><span class="blue">◒</span><span class="dim"> ─────────────────────────────────── </span><span class="red">◓</span><span class="blue">◒</span>
+
+ 종료: Ctrl+D 또는 '나가기' 입력
+
+`;
+
+const steps = [
+  { type: 'prompt', text: '' },
+  { type: 'type', text: '변수 과일 = ["사과", "배", "포도"]', delay: 50 },
+  { type: 'output', text: '' },
+  { type: 'prompt', text: '' },
+  { type: 'type', text: '반복 f 안에서 과일 { 출력(f) }', delay: 50 },
+  { type: 'output', text: ' 사과\n 배\n 포도' },
+  { type: 'prompt', text: '' },
+  { type: 'type', text: '출력(현재시간())', delay: 50 },
+  { type: 'output', text: ' 2025-03-15 14:30:00' },
+];
+
+const el = document.getElementById('output');
+let fullText = banner;
+
+async function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+async function run() {
+  el.innerHTML = fullText + ' <span class="prompt">한&gt;</span> <span id="cursor"></span>';
+  await sleep(1000);
+
+  for (const step of steps) {
+    if (step.type === 'prompt') {
+      fullText += '\n <span class="prompt">한&gt;</span> ';
+      el.innerHTML = fullText + '<span id="cursor"></span>';
+      await sleep(500);
+    } else if (step.type === 'type') {
+      for (const ch of step.text) {
+        fullText += ch;
+        el.innerHTML = fullText + '<span id="cursor"></span>';
+        await sleep(step.delay);
+      }
+      await sleep(300);
+      fullText += '\n';
+    } else if (step.type === 'output') {
+      fullText += step.text + '\n';
+      el.innerHTML = fullText + '<span id="cursor"></span>';
+      await sleep(800);
+    }
+  }
+  
+  el.innerHTML = fullText + '\n <span class="prompt">한&gt;</span> <span id="cursor"></span>';
+}
+
+run();
+</script>
+</body>
+</html>
