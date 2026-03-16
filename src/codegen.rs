@@ -652,21 +652,40 @@ impl CodeGen {
 
                 let arg_types: Vec<&str> = args.iter().map(|a| self.infer_type(a)).collect();
                 let arg_vals: Vec<String> = args.iter().map(|a| self.gen_expr(a)).collect();
-                let ret_ty = self.var_types.get(name.as_str()).copied().unwrap_or("i64");
-                let t = self.fresh_temp();
                 let arg_str: String = arg_types
                     .iter()
                     .zip(arg_vals.iter())
                     .map(|(ty, v)| format!("{} {}", ty, v))
                     .collect::<Vec<_>>()
                     .join(", ");
-                self.emit(&format!(
-                    "  {} = call {} @{}({})",
-                    t,
-                    ret_ty,
-                    Self::sanitize_ident(name),
-                    arg_str
-                ));
+
+                let t = self.fresh_temp();
+                if self.var_types.contains_key(name.as_str()) {
+                    let fn_ptr_i64 = self.fresh_temp();
+                    self.emit(&format!(
+                        "  {} = load i64, i64* {}",
+                        fn_ptr_i64,
+                        Self::var_ptr(name)
+                    ));
+                    let fn_ptr = self.fresh_temp();
+                    let param_types_str = arg_types
+                        .iter()
+                        .map(|t| t.to_string())
+                        .collect::<Vec<_>>()
+                        .join(", ");
+                    self.emit(&format!(
+                        "  {} = inttoptr i64 {} to i64 ({})*",
+                        fn_ptr, fn_ptr_i64, param_types_str
+                    ));
+                    self.emit(&format!("  {} = call i64 {}({})", t, fn_ptr, arg_str));
+                } else {
+                    self.emit(&format!(
+                        "  {} = call i64 @{}({})",
+                        t,
+                        Self::sanitize_ident(name),
+                        arg_str
+                    ));
+                }
                 t
             }
             Expr::ArrayLiteral(elems) => {
@@ -748,8 +767,38 @@ impl CodeGen {
             }
 
             Expr::Range { start, end } => self.gen_range_expr(start, end),
+            Expr::Lambda { params, body, .. } => {
+                let lambda_name = format!("__lambda_{}", self.fresh_label());
+                let saved_output = std::mem::take(&mut self.output);
+                let saved_vars = self.var_types.clone();
+                let saved_error_flag = self.current_error_flag.clone();
+                let saved_error_msg = self.current_error_message.clone();
+
+                let typed_params: Vec<(String, crate::ast::Type)> = params
+                    .iter()
+                    .map(|(name, ty)| (name.clone(), ty.clone().unwrap_or(crate::ast::Type::정수)))
+                    .collect();
+                self.gen_func(
+                    &lambda_name,
+                    &typed_params,
+                    &Some(crate::ast::Type::정수),
+                    body,
+                );
+
+                let lambda_output = std::mem::replace(&mut self.output, saved_output);
+                self.var_types = saved_vars;
+                self.current_error_flag = saved_error_flag;
+                self.current_error_message = saved_error_msg;
+                self.globals.push_str(&lambda_output);
+
+                let t = self.fresh_temp();
+                self.emit(&format!(
+                    "  {} = ptrtoint i64 (i64)* @{} to i64",
+                    t, lambda_name
+                ));
+                t
+            }
             Expr::MethodCall { .. }
-            | Expr::Lambda { .. }
             | Expr::TupleLiteral(_)
             | Expr::TupleIndex { .. }
             | Expr::MapLiteral(_) => {

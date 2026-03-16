@@ -185,7 +185,6 @@ fn test_compiled_backend_enum_match_branches_by_variant_tag() {
 }
 
 #[test]
-#[ignore = "codegen: Korean identifiers in LLVM IR not yet supported"]
 fn test_compiled_backend_lambda_outputs_value() {
     let out = build_and_run(
         "변수 두배 = 함수(x: 정수) {
