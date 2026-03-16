@@ -69,18 +69,24 @@
 
     #editor {
       flex: 1;
-      background: #0d1117;
-      color: #c9d1d9;
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 14px;
-      line-height: 1.6;
-      padding: 20px;
-      border: none;
-      outline: none;
-      resize: none;
-      width: 100%;
       min-height: 480px;
+      overflow: auto;
     }
+
+    .cm-editor {
+      height: 100%;
+      min-height: 480px;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+      font-size: 14px !important;
+    }
+
+    .cm-editor.cm-focused { outline: none; }
+    .cm-scroller { overflow: auto; }
+    .cm-content { padding: 20px !important; }
+    .cm-gutters { background: #0d1117 !important; border-right: 1px solid #21262d !important; color: #3c4450 !important; }
+    .cm-activeLineGutter { background: #161b22 !important; }
+    .cm-activeLine { background: #161b2240 !important; }
+    .cm-cursor { border-left-color: #c9d1d9 !important; }
 
     #output {
       flex: 1;
@@ -157,10 +163,7 @@
       <span>코드 편집기</span>
       <button class="run-btn" id="runBtn" onclick="runCode()">▶ 실행</button>
     </div>
-    <textarea id="editor" spellcheck="false">변수 후렴 = ["Gonna be, gonna be golden", "영원히 깨질 수 없는"]
-반복 변수 i = 0; i < 후렴.길이(); i += 1 {
-    출력(후렴[i])
-}</textarea>
+    <div id="editor"></div>
     <div class="examples">
       <button class="example-btn" onclick="loadExample('golden')">Golden</button>
       <button class="example-btn" onclick="loadExample('fibonacci')">피보나치</button>
@@ -181,6 +184,58 @@
 
 <script type="module">
   import init, { run_han } from './han.js';
+  import { EditorView, keymap, lineNumbers, highlightActiveLine } from 'https://esm.sh/@codemirror/view@6';
+  import { EditorState } from 'https://esm.sh/@codemirror/state@6';
+  import { StreamLanguage, HighlightStyle, syntaxHighlighting } from 'https://esm.sh/@codemirror/language@6';
+  import { defaultKeymap, indentWithTab } from 'https://esm.sh/@codemirror/commands@6';
+  import { tags } from 'https://esm.sh/@lezer/highlight@1';
+
+  const KEYWORDS = ['함수','만약','아니면','반복','동안','반환','변수','상수','구조','구현','맞춰','시도','실패','멈춰','계속','열거','안에서','자신'];
+  const TYPES    = ['정수','실수','문자열','불','없음'];
+  const BUILTINS = ['출력','출력오류','형식','입력','길이','실수변환','정수변환','제곱근','절댓값','거듭제곱','가져오기','타입','파일읽기','파일쓰기','파일존재'];
+  const ATOMS    = ['참','거짓'];
+  const KO_WORD  = /[\w\uAC00-\uD7A3\u3131-\u3163]+/;
+
+  const hanLang = StreamLanguage.define({
+    token(stream) {
+      if (stream.match('//')) { stream.skipToEnd(); return 'lineComment'; }
+      if (stream.peek() === '"') {
+        stream.next();
+        while (!stream.eol()) { if (stream.next() === '"') break; }
+        return 'string';
+      }
+      if (stream.match(/\d+(\.\d+)?/)) return 'number';
+      if (stream.match(KO_WORD)) {
+        const w = stream.current();
+        if (KEYWORDS.includes(w)) return 'keyword';
+        if (TYPES.includes(w))    return 'typeName';
+        if (BUILTINS.includes(w)) return 'function';
+        if (ATOMS.includes(w))    return 'atom';
+        return 'variableName';
+      }
+      stream.next();
+      return null;
+    }
+  });
+
+  const hanTheme = HighlightStyle.define([
+    { tag: tags.keyword,       color: '#569CD6' },
+    { tag: tags.typeName,      color: '#4EC9B0' },
+    { tag: tags.function(tags.variableName), color: '#DCDCAA' },
+    { tag: tags.atom,          color: '#569CD6' },
+    { tag: tags.string,        color: '#CE9178' },
+    { tag: tags.number,        color: '#B5CEA8' },
+    { tag: tags.lineComment,   color: '#6A9955', fontStyle: 'italic' },
+    { tag: tags.variableName,  color: '#9CDCFE' },
+  ]);
+
+  const editorTheme = EditorView.theme({
+    '&': { background: '#0d1117', color: '#c9d1d9', height: '100%' },
+    '.cm-content': { caretColor: '#c9d1d9' },
+    '.cm-selectionBackground, ::selection': { background: '#264f78 !important' },
+  }, { dark: true });
+
+  let view;
 
   const EXAMPLES = {
     golden: `변수 후렴 = [
@@ -295,6 +350,24 @@
 출력(형식("판정: {0}", 판정(지수)))`
   };
 
+  const initialCode = EXAMPLES['golden'];
+
+  view = new EditorView({
+    state: EditorState.create({
+      doc: initialCode,
+      extensions: [
+        lineNumbers(),
+        highlightActiveLine(),
+        hanLang,
+        syntaxHighlighting(hanTheme),
+        editorTheme,
+        keymap.of([...defaultKeymap, indentWithTab]),
+        EditorView.lineWrapping,
+      ]
+    }),
+    parent: document.getElementById('editor')
+  });
+
   let wasmReady = false;
 
   async function initWasm() {
@@ -305,7 +378,7 @@
 
   window.runCode = function() {
     if (!wasmReady) return;
-    const code = document.getElementById('editor').value;
+    const code = view.state.doc.toString();
     const out = document.getElementById('output');
     out.className = '';
     const result = run_han(code);
@@ -316,7 +389,9 @@
   };
 
   window.loadExample = function(name) {
-    document.getElementById('editor').value = EXAMPLES[name];
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: EXAMPLES[name] }
+    });
   };
 
   window.addEventListener('keydown', (e) => {
