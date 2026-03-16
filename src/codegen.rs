@@ -94,7 +94,7 @@ impl CodeGen {
             Type::문자열 => "i8*",
             Type::불 => "i1",
             Type::없음 => "void",
-            Type::배열(_) => "i8*",
+            Type::배열(_) => "i64*",
             Type::구조체(_) => "i8*",
             Type::함수타입 => "i8*",
             Type::튜플(_) => "i8*",
@@ -798,14 +798,63 @@ impl CodeGen {
                 ));
                 t
             }
-            Expr::MethodCall { .. }
-            | Expr::TupleLiteral(_)
-            | Expr::TupleIndex { .. }
-            | Expr::MapLiteral(_) => {
+            Expr::MethodCall {
+                object,
+                method,
+                args,
+            } => {
+                let obj_val = self.gen_expr(object);
+                let obj_ty = self.infer_type(object);
+                let t = self.fresh_temp();
+
+                match method.as_str() {
+                    "길이" => {
+                        if obj_ty == "i8*" {
+                            self.emit(&format!("  {} = call i64 @strlen(i8* {})", t, obj_val));
+                        } else {
+                            let len_ptr = self.fresh_temp();
+                            self.emit(&format!(
+                                "  {} = getelementptr inbounds i64, i64* {}, i64 -1",
+                                len_ptr, obj_val
+                            ));
+                            self.emit(&format!("  {} = load i64, i64* {}", t, len_ptr));
+                        }
+                    }
+                    _ => {
+                        let arg_vals: Vec<String> = args.iter().map(|a| self.gen_expr(a)).collect();
+                        let mut all_args = vec![format!("i64 {}", obj_val)];
+                        for av in &arg_vals {
+                            all_args.push(format!("i64 {}", av));
+                        }
+                        self.emit(&format!(
+                            "  {} = call i64 @{}__{}({})",
+                            t,
+                            Self::sanitize_ident(&self.guess_struct_type(object)),
+                            Self::sanitize_ident(method),
+                            all_args.join(", ")
+                        ));
+                    }
+                }
+                t
+            }
+            Expr::TupleLiteral(_) | Expr::TupleIndex { .. } | Expr::MapLiteral(_) => {
                 let t = self.fresh_temp();
                 self.emit(&format!("  {} = add nsw i64 0, 0", t));
                 t
             }
+        }
+    }
+
+    fn guess_struct_type(&self, expr: &Expr) -> String {
+        if let Expr::Identifier(name) = expr {
+            for (sname, _) in &self.struct_defs {
+                if self.var_types.get(name.as_str()).is_some() {
+                    return sname.clone();
+                }
+            }
+            name.clone()
+        } else {
+            "unknown".to_string()
         }
     }
 
@@ -1166,7 +1215,27 @@ impl CodeGen {
 
                 self.emit(&format!("{}:", end_lbl));
             }
-            StmtKind::ImplBlock { .. } => {}
+            StmtKind::ImplBlock {
+                struct_name,
+                methods,
+            } => {
+                for method_stmt in methods {
+                    if let StmtKind::FuncDef {
+                        name,
+                        params,
+                        return_type,
+                        body,
+                    } = &method_stmt.kind
+                    {
+                        let method_name = format!(
+                            "{}__{}",
+                            Self::sanitize_ident(struct_name),
+                            Self::sanitize_ident(name)
+                        );
+                        self.gen_func(&method_name, params, return_type, body);
+                    }
+                }
+            }
             StmtKind::EnumDef { name, variants } => {
                 self.enum_defs.insert(name.clone(), variants.clone());
             }

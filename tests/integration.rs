@@ -137,7 +137,6 @@ fn test_compiled_backend_try_catch_handles_division_by_zero() {
 }
 
 #[test]
-#[ignore = "codegen: method call codegen not yet implemented"]
 fn test_compiled_backend_string_method_length() {
     let out = build_and_run("출력(\"hello\".길이())\n", "han_string_len");
 
@@ -145,7 +144,6 @@ fn test_compiled_backend_string_method_length() {
 }
 
 #[test]
-#[ignore = "codegen: method call codegen not yet implemented"]
 fn test_compiled_backend_array_method_length() {
     let out = build_and_run(
         "변수 values: [정수] = [3, 4, 5]\n출력(values.길이())\n",
