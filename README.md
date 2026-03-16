@@ -467,7 +467,9 @@ Every keyword in Han is a real Korean word. If you're learning Korean, writing H
 | `멈춰` | meom-chwo | stop | break |
 | `계속` | gye-sok | continue | continue |
 | `시도` | si-do | attempt | try block |
-| `실패` | sil-pae | failure | catch block |
+| `처리` | cheo-ri | handling/processing | catch block |
+| `맞춤` | mat-chum | matching/fit | pattern match |
+| `포함` | po-ham | include/contain | import module |
 
 Reading Han code is reading Korean. Every identifier, every keyword, every method name — it's all real language.
 
