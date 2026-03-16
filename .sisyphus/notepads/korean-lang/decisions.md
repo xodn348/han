@@ -21,3 +21,7 @@
 ## 2026-03-16 Warning-only function call validation
 - Kept the type checker as a collector (`Vec<TypeError>`) and switched CLI/WASM callers to render `[타입 경고]` messages instead of exiting early, so static analysis stays advisory.
 - Implemented argument validation by looking up function signatures from `env.funcs` and comparing both arity and inferred argument types at each `Expr::Call`.
+
+## 2026-03-16 Warning-only struct and array validation
+- Kept new struct-field and array-element validation inside `src/typechecker.rs` so parser, AST, and interpreter behavior stay unchanged.
+- Tightened `types_compatible` for arrays to recurse into element types, which makes array annotations and for-in inference reuse the same compatibility rules as scalar values.

@@ -32,6 +32,48 @@ impl TypeEnv {
     }
 }
 
+fn array_element_type(items: &[Expr], env: &TypeEnv) -> Option<Type> {
+    if items.is_empty() {
+        return Some(Type::정수);
+    }
+
+    let mut inferred_type = infer_expr_type(&items[0], env)?;
+
+    for item in &items[1..] {
+        let actual_type = infer_expr_type(item, env)?;
+        if types_compatible(&inferred_type, &actual_type) {
+            continue;
+        }
+        if types_compatible(&actual_type, &inferred_type) {
+            inferred_type = actual_type;
+        }
+    }
+
+    Some(inferred_type)
+}
+
+fn array_element_mismatch(items: &[Expr], env: &TypeEnv) -> Option<(Type, Type)> {
+    if items.len() < 2 {
+        return None;
+    }
+
+    let mut inferred_type = infer_expr_type(&items[0], env)?;
+
+    for item in &items[1..] {
+        let actual_type = infer_expr_type(item, env)?;
+        if types_compatible(&inferred_type, &actual_type) {
+            continue;
+        }
+        if types_compatible(&actual_type, &inferred_type) {
+            inferred_type = actual_type;
+            continue;
+        }
+        return Some((inferred_type, actual_type));
+    }
+
+    None
+}
+
 fn infer_expr_type(expr: &Expr, env: &TypeEnv) -> Option<Type> {
     match expr {
         Expr::IntLiteral(_) => Some(Type::정수),
@@ -67,9 +109,10 @@ fn infer_expr_type(expr: &Expr, env: &TypeEnv) -> Option<Type> {
             }
         }
         Expr::Call { name, .. } => env.funcs.get(name).and_then(|(_, ret)| ret.clone()),
-        Expr::ArrayLiteral(_) => Some(Type::배열(Box::new(Type::정수))),
+        Expr::ArrayLiteral(items) => Some(Type::배열(Box::new(array_element_type(items, env)?))),
         Expr::TupleLiteral(_) => Some(Type::튜플(Vec::new())),
         Expr::Range { .. } => Some(Type::배열(Box::new(Type::정수))),
+        Expr::StructLiteral { name, .. } => Some(Type::구조체(name.clone())),
         _ => None,
     }
 }
@@ -140,7 +183,21 @@ fn check_expr(expr: &Expr, env: &TypeEnv, errors: &mut Vec<TypeError>, line: usi
             check_call_args(name, args, env, line, errors);
         }
         Expr::Assign { value, .. } => check_expr(value, env, errors, line),
-        Expr::ArrayLiteral(items) | Expr::TupleLiteral(items) => {
+        Expr::ArrayLiteral(items) => {
+            for item in items {
+                check_expr(item, env, errors, line);
+            }
+            if let Some((expected_type, actual_type)) = array_element_mismatch(items, env) {
+                errors.push(TypeError::new(
+                    format!(
+                        "배열 요소 타입 불일치: {:?} 요소가 예상되지만 {:?} 요소가 포함됨",
+                        expected_type, actual_type
+                    ),
+                    line,
+                ));
+            }
+        }
+        Expr::TupleLiteral(items) => {
             for item in items {
                 check_expr(item, env, errors, line);
             }
@@ -165,9 +222,30 @@ fn check_expr(expr: &Expr, env: &TypeEnv, errors: &mut Vec<TypeError>, line: usi
             }
         }
         Expr::FieldAccess { object, .. } => check_expr(object, env, errors, line),
-        Expr::StructLiteral { fields, .. } => {
-            for (_, value) in fields {
+        Expr::StructLiteral { name, fields } => {
+            for (field_name, value) in fields {
                 check_expr(value, env, errors, line);
+                let Some(declared_fields) = env.structs.get(name) else {
+                    continue;
+                };
+                let Some((_, declared_type)) = declared_fields
+                    .iter()
+                    .find(|(declared_name, _)| declared_name == field_name)
+                else {
+                    continue;
+                };
+                let Some(actual_type) = infer_expr_type(value, env) else {
+                    continue;
+                };
+                if !types_compatible(declared_type, &actual_type) {
+                    errors.push(TypeError::new(
+                        format!(
+                            "구조체 필드 타입 불일치: '{}.{}' 는 {:?} 예상, {:?} 전달",
+                            name, field_name, declared_type, actual_type
+                        ),
+                        line,
+                    ));
+                }
             }
         }
         Expr::FieldAssign { object, value, .. } => {
@@ -274,7 +352,12 @@ fn check_stmt(stmt: &Stmt, env: &mut TypeEnv, errors: &mut Vec<TypeError>) {
             body,
         } => {
             check_expr(iterable, env, errors, line);
-            env.vars.insert(var_name.clone(), Type::정수);
+            let item_type = match infer_expr_type(iterable, env) {
+                Some(Type::배열(inner)) => *inner,
+                Some(Type::문자열) => Type::문자열,
+                _ => Type::정수,
+            };
+            env.vars.insert(var_name.clone(), item_type);
             for s in body {
                 check_stmt(s, env, errors);
             }
@@ -345,14 +428,15 @@ fn types_compatible(declared: &Type, actual: &Type) -> bool {
         (Type::문자열, Type::문자열) => true,
         (Type::불, Type::불) => true,
         (Type::없음, Type::없음) => true,
-        (Type::배열(_), Type::배열(_)) => true,
+        (Type::배열(declared_inner), Type::배열(actual_inner)) => {
+            types_compatible(declared_inner, actual_inner)
+        }
         (Type::튜플(_), Type::튜플(_)) => true,
         (Type::구조체(a), Type::구조체(b)) => a == b,
         (Type::함수타입, _) => true,
         _ => false,
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -400,6 +484,55 @@ mod tests {
         let errors = check_src(
             "함수 더하기(가: 정수, 나: 정수) -> 정수 { 반환 가 + 나 }
 더하기(1, 2)",
+        );
+
+        assert!(errors.is_empty());
+    }
+
+    #[test]
+    fn warns_on_struct_literal_field_type_mismatch() {
+        let errors = check_src(
+            r#"구조 사람 { 나이: 정수 }
+변수 p = 사람 { 나이: "문자" }"#,
+        );
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 2);
+        assert!(errors[0].message.contains("사람"));
+        assert!(errors[0].message.contains("나이"));
+        assert!(errors[0].message.contains("정수"));
+        assert!(errors[0].message.contains("문자열"));
+    }
+
+    #[test]
+    fn warns_on_mixed_array_literal_elements() {
+        let errors = check_src(r#"변수 arr = [1, "hello", 참]"#);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 1);
+        assert!(errors[0].message.contains("배열"));
+        assert!(errors[0].message.contains("정수"));
+        assert!(errors[0].message.contains("문자열"));
+    }
+
+    #[test]
+    fn warns_on_array_type_annotation_with_wrong_element_type() {
+        let errors = check_src(r#"변수 arr: [정수] = ["hello"]"#);
+
+        assert_eq!(errors.len(), 1);
+        assert_eq!(errors[0].line, 1);
+        assert!(errors[0].message.contains("arr"));
+        assert!(errors[0].message.contains("배열"));
+        assert!(errors[0].message.contains("정수"));
+        assert!(errors[0].message.contains("문자열"));
+    }
+
+    #[test]
+    fn infers_for_in_variable_type_from_array_elements() {
+        let errors = check_src(
+            r#"함수 외치기(값: 문자열) { 출력(값) }
+변수 arr = ["hello"]
+반복 item 안에서 arr { 외치기(item) }"#,
         );
 
         assert!(errors.is_empty());
