@@ -1023,7 +1023,23 @@ impl CodeGen {
                 error_name,
                 catch_block,
             } => self.gen_try_catch_stmt(try_block, error_name, catch_block),
-            StmtKind::Import(_) => {}
+            StmtKind::Import(path) => {
+                if let Ok(source) = std::fs::read_to_string(path) {
+                    let tokens = crate::lexer::tokenize(&source);
+                    if let Ok(program) = crate::parser::parse(tokens) {
+                        for stmt in &program.stmts {
+                            match &stmt.kind {
+                                StmtKind::FuncDef { .. }
+                                | StmtKind::StructDef { .. }
+                                | StmtKind::EnumDef { .. } => {
+                                    self.gen_stmt(stmt);
+                                }
+                                _ => {}
+                            }
+                        }
+                    }
+                }
+            }
             StmtKind::Match { expr, arms } => {
                 let val = self.gen_expr(expr);
                 let end_lbl = format!("match_end{}", self.fresh_label());
