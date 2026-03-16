@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Han (한) Playground</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: 'Segoe UI', system-ui, sans-serif;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      padding: 16px 24px;
+      border-bottom: 1px solid #21262d;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #f0f6fc;
+    }
+
+    header span {
+      font-size: 13px;
+      color: #8b949e;
+    }
+
+    .badge {
+      font-size: 11px;
+      background: #1f6feb;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 12px;
+    }
+
+    .main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0;
+    }
+
+    .panel {
+      display: flex;
+      flex-direction: column;
+      border-right: 1px solid #21262d;
+    }
+
+    .panel-header {
+      padding: 8px 16px;
+      font-size: 12px;
+      color: #8b949e;
+      background: #161b22;
+      border-bottom: 1px solid #21262d;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #editor {
+      flex: 1;
+      background: #0d1117;
+      color: #c9d1d9;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 20px;
+      border: none;
+      outline: none;
+      resize: none;
+      width: 100%;
+      min-height: 480px;
+    }
+
+    #output {
+      flex: 1;
+      background: #010409;
+      color: #56d364;
+      font-family: 'JetBrains Mono', 'Fira Code', monospace;
+      font-size: 14px;
+      line-height: 1.6;
+      padding: 20px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 480px;
+      overflow-y: auto;
+    }
+
+    #output.error { color: #f85149; }
+    #output.waiting { color: #8b949e; font-style: italic; }
+
+    .run-btn {
+      background: #238636;
+      color: #fff;
+      border: none;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .run-btn:hover { background: #2ea043; }
+    .run-btn:disabled { background: #21262d; color: #8b949e; cursor: not-allowed; }
+
+    .examples {
+      padding: 8px 16px;
+      background: #161b22;
+      border-top: 1px solid #21262d;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .example-btn {
+      font-size: 12px;
+      color: #8b949e;
+      background: transparent;
+      border: 1px solid #30363d;
+      padding: 3px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    .example-btn:hover { color: #c9d1d9; border-color: #6e7681; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>한 <span style="color:#8b949e">Han</span></h1>
+  <span class="badge">v0.1.0</span>
+  <span>한국어 프로그래밍 언어 플레이그라운드</span>
+  <span style="margin-left:auto; font-size:12px; color:#8b949e">
+    <a href="https://github.com/xodn348/han" style="color:#58a6ff">GitHub</a>
+    &nbsp;·&nbsp;
+    <a href="https://xodn348.github.io/han/introduction.html" style="color:#58a6ff">Docs</a>
+  </span>
+</header>
+
+<div class="main">
+  <div class="panel">
+    <div class="panel-header">
+      <span>코드 편집기</span>
+      <button class="run-btn" id="runBtn" onclick="runCode()">▶ 실행</button>
+    </div>
+    <textarea id="editor" spellcheck="false">출력("안녕하세요, 세계!")</textarea>
+    <div class="examples">
+      <button class="example-btn" onclick="loadExample('hello')">Hello World</button>
+      <button class="example-btn" onclick="loadExample('fibonacci')">피보나치</button>
+      <button class="example-btn" onclick="loadExample('loop')">반복문</button>
+      <button class="example-btn" onclick="loadExample('struct')">구조체</button>
+      <button class="example-btn" onclick="loadExample('closure')">클로저</button>
+    </div>
+  </div>
+
+  <div class="panel" style="border-right:none">
+    <div class="panel-header">
+      <span>출력</span>
+    </div>
+    <div id="output" class="waiting">▶ 실행 버튼을 눌러주세요</div>
+  </div>
+</div>
+
+<script type="module">
+  import init, { run_han } from './han.js';
+
+  const EXAMPLES = {
+    hello: `출력("안녕하세요, 세계!")`,
+    fibonacci: `함수 피보나치(n: 정수) -> 정수 {
+    만약 n <= 1 {
+        반환 n
+    }
+    반환 피보나치(n - 1) + 피보나치(n - 2)
+}
+
+반복 변수 i = 0; i < 10; i += 1 {
+    출력(피보나치(i))
+}`,
+    loop: `반복 변수 i = 1; i <= 5; i += 1 {
+    만약 i % 2 == 0 {
+        출력(형식("{0} 은 짝수", i))
+    } 아니면 {
+        출력(형식("{0} 은 홀수", i))
+    }
+}`,
+    struct: `구조 사람 {
+    이름: 문자열,
+    나이: 정수
+}
+
+변수 p = 사람 { 이름: "홍길동", 나이: 30 }
+출력(형식("이름: {0}, 나이: {1}", p.이름, p.나이))`,
+    closure: `변수 두배 = 함수(x: 정수) { 반환 x * 2 }
+변수 세배 = 함수(x: 정수) { 반환 x * 3 }
+
+반복 변수 i = 1; i <= 5; i += 1 {
+    출력(형식("{0} → 2배:{1}, 3배:{2}", i, 두배(i), 세배(i)))
+}`
+  };
+
+  let wasmReady = false;
+
+  async function initWasm() {
+    await init();
+    wasmReady = true;
+    document.getElementById('runBtn').disabled = false;
+  }
+
+  window.runCode = function() {
+    if (!wasmReady) return;
+    const code = document.getElementById('editor').value;
+    const out = document.getElementById('output');
+    out.className = '';
+    const result = run_han(code);
+    if (result.includes('[런타임 에러]') || result.includes('[파서 에러]') || result.includes('[타입 에러]')) {
+      out.className = 'error';
+    }
+    out.textContent = result || '(출력 없음)';
+  };
+
+  window.loadExample = function(name) {
+    document.getElementById('editor').value = EXAMPLES[name];
+  };
+
+  window.addEventListener('keydown', (e) => {
+    if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
+      e.preventDefault();
+      window.runCode();
+    }
+  });
+
+  document.getElementById('runBtn').disabled = true;
+  initWasm();
+</script>
+
+</body>
+</html>

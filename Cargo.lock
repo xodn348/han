@@ -398,6 +398,7 @@ dependencies = [
  "regex",
  "reqwest",
  "serde_json",
+ "wasm-bindgen",
 ]
 
 [[package]]

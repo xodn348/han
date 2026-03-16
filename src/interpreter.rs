@@ -4,6 +4,29 @@ use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::rc::Rc;
 
+thread_local! {
+    static OUTPUT_BUFFER: RefCell<Option<String>> = const { RefCell::new(None) };
+}
+
+pub fn capture_start() {
+    OUTPUT_BUFFER.with(|b| *b.borrow_mut() = Some(String::new()));
+}
+
+pub fn capture_flush() -> String {
+    OUTPUT_BUFFER.with(|b| b.borrow_mut().take().unwrap_or_default())
+}
+
+fn output_line(s: &str) {
+    OUTPUT_BUFFER.with(|b| {
+        if let Some(buf) = b.borrow_mut().as_mut() {
+            buf.push_str(s);
+            buf.push('\n');
+        } else {
+            println!("{}", s);
+        }
+    });
+}
+
 #[derive(Debug, Clone)]
 pub enum Value {
     Int(i64),
@@ -225,7 +248,7 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
                     let v = eval_expr(arg, env, line)?;
                     parts.push(v.to_string());
                 }
-                println!("{}", parts.join(" "));
+                output_line(&parts.join(" "));
                 return Ok(Value::Void);
             }
 
@@ -833,42 +856,58 @@ fn eval_builtin_stdlib(
             Ok(Some(Value::Str(pretty)))
         }
         "HTTP_가져오기" => {
-            if args.len() != 1 {
-                return Err(RuntimeError::new("HTTP_가져오기: URL 인자 필요", line));
+            #[cfg(feature = "native")]
+            {
+                if args.len() != 1 {
+                    return Err(RuntimeError::new("HTTP_가져오기: URL 인자 필요", line));
+                }
+                let url = match eval_expr(&args[0], env, line)? {
+                    Value::Str(s) => s,
+                    _ => return Err(RuntimeError::new("HTTP_가져오기: 문자열 URL 필요", line)),
+                };
+                let body = reqwest::blocking::get(&url)
+                    .map_err(|e| RuntimeError::new(format!("HTTP 오류: {}", e), line))?
+                    .text()
+                    .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
+                return Ok(Some(Value::Str(body)));
             }
-            let url = match eval_expr(&args[0], env, line)? {
-                Value::Str(s) => s,
-                _ => return Err(RuntimeError::new("HTTP_가져오기: 문자열 URL 필요", line)),
-            };
-            let body = reqwest::blocking::get(&url)
-                .map_err(|e| RuntimeError::new(format!("HTTP 오류: {}", e), line))?
-                .text()
-                .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
-            Ok(Some(Value::Str(body)))
+            #[cfg(not(feature = "native"))]
+            return Err(RuntimeError::new(
+                "HTTP_가져오기: 플레이그라운드에서 미지원",
+                line,
+            ));
         }
         "HTTP_보내기" => {
-            if args.len() < 2 {
-                return Err(RuntimeError::new("HTTP_보내기: URL, 본문 인자 필요", line));
+            #[cfg(feature = "native")]
+            {
+                if args.len() < 2 {
+                    return Err(RuntimeError::new("HTTP_보내기: URL, 본문 인자 필요", line));
+                }
+                let url = match eval_expr(&args[0], env, line)? {
+                    Value::Str(s) => s,
+                    _ => return Err(RuntimeError::new("HTTP_보내기: 문자열 URL 필요", line)),
+                };
+                let body_val = eval_expr(&args[1], env, line)?;
+                let body_str = match &body_val {
+                    Value::Str(s) => s.clone(),
+                    _ => value_to_json(&body_val).to_string(),
+                };
+                let client = reqwest::blocking::Client::new();
+                let resp = client
+                    .post(&url)
+                    .header("Content-Type", "application/json")
+                    .body(body_str)
+                    .send()
+                    .map_err(|e| RuntimeError::new(format!("HTTP POST 오류: {}", e), line))?
+                    .text()
+                    .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
+                return Ok(Some(Value::Str(resp)));
             }
-            let url = match eval_expr(&args[0], env, line)? {
-                Value::Str(s) => s,
-                _ => return Err(RuntimeError::new("HTTP_보내기: 문자열 URL 필요", line)),
-            };
-            let body_val = eval_expr(&args[1], env, line)?;
-            let body_str = match &body_val {
-                Value::Str(s) => s.clone(),
-                _ => value_to_json(&body_val).to_string(),
-            };
-            let client = reqwest::blocking::Client::new();
-            let resp = client
-                .post(&url)
-                .header("Content-Type", "application/json")
-                .body(body_str)
-                .send()
-                .map_err(|e| RuntimeError::new(format!("HTTP POST 오류: {}", e), line))?
-                .text()
-                .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
-            Ok(Some(Value::Str(resp)))
+            #[cfg(not(feature = "native"))]
+            return Err(RuntimeError::new(
+                "HTTP_보내기: 플레이그라운드에서 미지원",
+                line,
+            ));
         }
         "정규식_찾기" => {
             if args.len() != 2 {
@@ -969,21 +1008,26 @@ fn eval_builtin_stdlib(
             }
         }
         "실행" => {
-            if args.len() != 1 {
-                return Err(RuntimeError::new("실행: 명령어 문자열 필요", line));
+            #[cfg(feature = "native")]
+            {
+                if args.len() != 1 {
+                    return Err(RuntimeError::new("실행: 명령어 문자열 필요", line));
+                }
+                let cmd = match eval_expr(&args[0], env, line)? {
+                    Value::Str(s) => s,
+                    _ => return Err(RuntimeError::new("실행: 문자열 필요", line)),
+                };
+                let output = std::process::Command::new("sh")
+                    .arg("-c")
+                    .arg(&cmd)
+                    .output()
+                    .map_err(|e| RuntimeError::new(format!("실행 오류: {}", e), line))?;
+                return Ok(Some(Value::Str(
+                    String::from_utf8_lossy(&output.stdout).to_string(),
+                )));
             }
-            let cmd = match eval_expr(&args[0], env, line)? {
-                Value::Str(s) => s,
-                _ => return Err(RuntimeError::new("실행: 문자열 필요", line)),
-            };
-            let output = std::process::Command::new("sh")
-                .arg("-c")
-                .arg(&cmd)
-                .output()
-                .map_err(|e| RuntimeError::new(format!("실행 오류: {}", e), line))?;
-            Ok(Some(Value::Str(
-                String::from_utf8_lossy(&output.stdout).to_string(),
-            )))
+            #[cfg(not(feature = "native"))]
+            return Err(RuntimeError::new("실행: 플레이그라운드에서 미지원", line));
         }
         "잠자기" => {
             if args.len() != 1 {
