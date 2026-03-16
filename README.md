@@ -3,7 +3,7 @@
 > A general-purpose compiled language with Korean keywords — written in Rust
 
 <p align="center">
-  <a href="https://github.com/xodn348/han/blob/main/spec/SPEC.md"><img src="https://img.shields.io/badge/docs-language%20spec-blue?style=flat-square" alt="Docs"></a>
+  <a href="https://xodn348.github.io/han/introduction.html"><img src="https://img.shields.io/badge/docs-xodn348.github.io%2Fhan-blue?style=flat-square" alt="Docs"></a>
   <a href="https://github.com/xodn348/han"><img src="https://img.shields.io/badge/language-Rust-orange?style=flat-square" alt="Rust"></a>
   <a href="https://github.com/xodn348/han/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT"></a>
 </p>
