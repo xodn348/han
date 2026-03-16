@@ -3,6 +3,12 @@
 > A general-purpose compiled language with Korean keywords — written in Rust
 
 <p align="center">
+  <a href="https://github.com/xodn348/han/blob/main/spec/SPEC.md"><img src="https://img.shields.io/badge/docs-language%20spec-blue?style=flat-square" alt="Docs"></a>
+  <a href="https://github.com/xodn348/han"><img src="https://img.shields.io/badge/language-Rust-orange?style=flat-square" alt="Rust"></a>
+  <a href="https://github.com/xodn348/han/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT"></a>
+</p>
+
+<p align="center">
   <img src="assets/demo.gif" alt="Han REPL — typing animation demo" width="600">
 </p>
 
@@ -12,11 +18,24 @@
 
 ---
 
+## Mission
+
+Han is not just a programming language. It is an experiment with three goals:
+
+**1. The Beauty of Hangul — a shoutout to King Sejong**
+Hangul (한글) was invented in 1443 with deliberate, scientific design — each character encodes the shape of the mouth and tongue used to pronounce it. It is one of the most elegant writing systems ever created. Han asks: what does code look like when written in a script built for clarity and beauty?
+
+**2. Korean Code for the AI Age — BPE optimization**
+LLMs are trained on English-dominant data. BPE tokenizers treat Korean characters as rare, splitting `함수` into multiple byte-level tokens while `function` becomes one. The more Korean code exists on the internet — in repos, in documentation, in examples — the better future tokenizers will represent the Korean language. Han is a small contribution to that corpus.
+
+**3. Minority Language as First-Class Syntax**
+Korean is spoken by ~80 million people, yet essentially zero programming languages use it as syntax. Han is an experiment: what happens when a minority language becomes the grammar of a compiler? How far can it go?
+
+---
+
 ## About
 
 Han is a statically-typed, compiled programming language where every keyword is written in Korean. It compiles to native binaries through LLVM IR and also ships with a tree-walking interpreter for instant execution. The compiler toolchain is written entirely in Rust.
-
-Han was born from the idea that programming doesn't have to look the same in every country. Hangul — the Korean writing system — is one of the most scientifically designed scripts in human history, and Han puts it to work as a first-class programming language rather than just a display string.
 
 ---
 
