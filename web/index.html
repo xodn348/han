@@ -180,66 +180,62 @@
   import init, { run_han } from './han.js';
 
   const EXAMPLES = {
-    hello: `// 변수 — Golden 가사로 배우기
-변수 제목 = "Golden"
-변수 아티스트 = "KPOP Demon Hunters"
-변수 하이라이트 = "밝게 빛나는 우린"
-
-출력(형식("🎵 {0} — {1}", 제목, 아티스트))
-출력(형식("'{0}'", 하이라이트))
-출력("→ We shine brightly")`,
-
-    array: `// 배열 + 반복문 — 한국어 가사 줄 출력
-변수 가사 = [
-    "어두워진 앞길 속에",
-    "끝없이 on stage",
-    "영원히 깨질 수 없는",
-    "밝게 빛나는 우린"
-]
-
-반복 변수 i = 0; i < 가사.길이(); i += 1 {
-    출력(형식("{0}  {1}", i + 1, 가사[i]))
-}`,
-
-    struct: `// 구조체 — 가사 한/영 쌍
-구조 가사줄 {
-    한국어: 문자열,
-    영어: 문자열
-}
-
-변수 lines = [
-    가사줄 { 한국어: "어두워진 앞길 속에", 영어: "In the darkened path ahead" },
-    가사줄 { 한국어: "끝없이", 영어: "Endlessly" },
-    가사줄 { 한국어: "영원히 깨질 수 없는", 영어: "Can never be broken" },
-    가사줄 { 한국어: "밝게 빛나는 우린", 영어: "We shine brightly" }
-]
-
-반복 변수 i = 0; i < lines.길이(); i += 1 {
-    출력(lines[i].한국어)
-    출력(형식("  → {0}", lines[i].영어))
-}`,
-
-    func: `// 함수 — 가사 포맷터
-함수 가사출력(줄: 문자열, 번역: 문자열) {
-    출력("♪ " + 줄)
-    출력("  " + 번역)
-    출력("")
-}
+    hello: `변수 훅 = "Gonna be, gonna be golden"
+변수 한국어 = "영원히 깨질 수 없는"
 
 출력("🎵 Golden — KPOP Demon Hunters")
-출력("")
-가사출력("어두워진 앞길 속에", "In the darkened path ahead")
-가사출력("영원히 깨질 수 없는", "Can never be broken")
-가사출력("밝게 빛나는 우린", "We shine brightly")
-출력("Gonna be, gonna be golden")`,
+출력(훅)
+출력(한국어)
+출력("→ Can never be broken")`,
 
-    analyze: `// 문자열 메서드 — 가사 분석
-변수 가사 = "어두워진 앞길 속에 끝없이 영원히 깨질 수 없는 밝게 빛나는 우린"
+    array: `변수 후렴 = [
+    "We're goin' up, up, up, it's our moment",
+    "You know together we're glowing",
+    "Gonna be, gonna be golden",
+    "영원히 깨질 수 없는",
+    "Gonna be, gonna be golden"
+]
+
+반복 변수 i = 0; i < 후렴.길이(); i += 1 {
+    출력(후렴[i])
+}`,
+
+    struct: `구조 가사줄 {
+    원문: 문자열,
+    뜻: 문자열
+}
+
+변수 후렴 = [
+    가사줄 { 원문: "Gonna be, gonna be golden", 뜻: "우린 골든이 될 거야" },
+    가사줄 { 원문: "영원히 깨질 수 없는", 뜻: "Can never be broken" },
+    가사줄 { 원문: "밝게 빛나는 우린", 뜻: "We shine brightly" }
+]
+
+반복 변수 i = 0; i < 후렴.길이(); i += 1 {
+    출력(후렴[i].원문)
+    출력("  → " + 후렴[i].뜻)
+}`,
+
+    func: `함수 후렴출력(횟수: 정수) {
+    반복 변수 i = 0; i < 횟수; i += 1 {
+        출력("Gonna be, gonna be golden")
+    }
+}
+
+출력("We're goin' up, up, up, it's our moment")
+출력("You know together we're glowing")
+후렴출력(1)
+출력("영원히 깨질 수 없는")
+후렴출력(1)`,
+
+    analyze: `변수 가사 = "영원히 깨질 수 없는"
+
+출력("원문: " + 가사)
+출력("뜻: Can never be broken")
+출력(형식("글자 수: {0}자", 가사.길이()))
 
 변수 단어들 = 가사.분리(" ")
-출력(형식("전체: {0}", 가사))
 출력(형식("단어 수: {0}개", 단어들.길이()))
-출력(형식("글자 수: {0}자", 가사.길이()))
 출력("")
 
 반복 변수 i = 0; i < 단어들.길이(); i += 1 {
