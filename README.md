@@ -406,8 +406,8 @@ hgl lsp                     Start LSP server (hover + completion)
 
 | Feature | Status |
 |---------|--------|
-| `hgl build` with closures/methods | Codegen stubs — interpreter only |
-| `hgl build` with string/array methods | Codegen stubs — interpreter only |
+| `hgl build` with closures/lambdas | Function pointer indirect call — in progress |
+| `hgl build` with string/array methods | Method call codegen — in progress |
 
 ---
 
@@ -745,7 +745,7 @@ Rust's enum types map naturally to AST nodes and token variants. Pattern matchin
 cargo test
 ```
 
-46 tests (41 unit + 5 integration) covering the lexer, parser, AST, interpreter, and code generator.
+59 tests (51 unit + 8 integration) covering the lexer, parser, AST, interpreter, type checker, and code generator.
 
 ---
 
