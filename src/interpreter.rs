@@ -4,7 +4,6 @@ use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::rc::Rc;
 
-#[allow(dead_code)]
 thread_local! {
     static OUTPUT_BUFFER: RefCell<Option<String>> = const { RefCell::new(None) };
 }
@@ -14,6 +13,7 @@ pub fn capture_start() {
     OUTPUT_BUFFER.with(|b| *b.borrow_mut() = Some(String::new()));
 }
 
+#[allow(dead_code)]
 pub fn capture_flush() -> String {
     OUTPUT_BUFFER.with(|b| b.borrow_mut().take().unwrap_or_default())
 }
