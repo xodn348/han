@@ -160,7 +160,17 @@ impl Parser {
             Token::열거 => self.parse_enum_def(),
             _ => {
                 let expr = self.parse_expr()?;
-                Ok(Stmt::new(StmtKind::ExprStmt(expr), span))
+                match self.peek().clone() {
+                    Token::만약 => {
+                        self.advance();
+                        self.parse_if_with_cond(span, expr)
+                    }
+                    Token::동안 => {
+                        self.advance();
+                        self.parse_while_with_cond(span, expr)
+                    }
+                    _ => Ok(Stmt::new(StmtKind::ExprStmt(expr), span)),
+                }
             }
         }
     }
@@ -275,6 +285,10 @@ impl Parser {
         self.no_struct_literal = true;
         let cond = self.parse_expr()?;
         self.no_struct_literal = false;
+        self.parse_if_with_cond(span, cond)
+    }
+
+    fn parse_if_with_cond(&mut self, span: Span, cond: Expr) -> Result<Stmt, ParseError> {
         let then_block = self.parse_block()?;
 
         let else_block = if matches!(self.peek(), Token::아니면) {
@@ -369,6 +383,10 @@ impl Parser {
         self.no_struct_literal = true;
         let cond = self.parse_expr()?;
         self.no_struct_literal = false;
+        self.parse_while_with_cond(span, cond)
+    }
+
+    fn parse_while_with_cond(&mut self, span: Span, cond: Expr) -> Result<Stmt, ParseError> {
         let body = self.parse_block()?;
         Ok(Stmt::new(StmtKind::WhileLoop { cond, body }, span))
     }
@@ -1281,6 +1299,53 @@ mod tests {
                 assert!(matches!(cond, Expr::BoolLiteral(true)));
                 assert_eq!(body.len(), 1);
                 assert!(matches!(body[0].kind, StmtKind::Break));
+            }
+            _ => panic!("Expected WhileLoop"),
+        }
+    }
+
+    #[test]
+    fn test_parse_sov_if_stmt() {
+        let src = "x > 0 만약 { 반환 x } 아니면 { 반환 -x }";
+        let prog = parse_src(src);
+        assert_eq!(prog.stmts.len(), 1);
+        match &prog.stmts[0].kind {
+            StmtKind::If {
+                cond,
+                then_block,
+                else_block,
+            } => {
+                assert!(matches!(
+                    cond,
+                    Expr::BinaryOp {
+                        op: BinaryOpKind::Gt,
+                        ..
+                    }
+                ));
+                assert_eq!(then_block.len(), 1);
+                assert!(else_block.is_some());
+                assert_eq!(else_block.as_ref().unwrap().len(), 1);
+            }
+            _ => panic!("Expected If"),
+        }
+    }
+
+    #[test]
+    fn test_parse_sov_while_loop() {
+        let src = "x > 0 동안 { x -= 1 }";
+        let prog = parse_src(src);
+        assert_eq!(prog.stmts.len(), 1);
+        match &prog.stmts[0].kind {
+            StmtKind::WhileLoop { cond, body } => {
+                assert!(matches!(
+                    cond,
+                    Expr::BinaryOp {
+                        op: BinaryOpKind::Gt,
+                        ..
+                    }
+                ));
+                assert_eq!(body.len(), 1);
+                assert!(matches!(body[0].kind, StmtKind::ExprStmt(_)));
             }
             _ => panic!("Expected WhileLoop"),
         }
