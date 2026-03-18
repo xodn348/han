@@ -13,7 +13,7 @@ This executes the file and imports all its definitions (functions, variables, st
 `수학도구.hgl`:
 ```
 함수 최대값(a: 정수, b: 정수) -> 정수 {
-    만약 a > b { 반환 a }
+    만약 a > b 이면 { 반환 a }
     반환 b
 }
 ```

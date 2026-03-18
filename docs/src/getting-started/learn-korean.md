@@ -7,7 +7,8 @@ Every keyword in Han is a real Korean word. If you're learning Korean, writing H
 | Code | Pronunciation | Meaning | What it does |
 |------|--------------|---------|-------------|
 | `함수` | ham-su | function (math term) | defines a function |
-| `만약` | man-yak | if/suppose | conditional branch |
+| `만약` | man-yak | if/suppose | starts a conditional |
+| `이면` | i-myeon | then/if-then | marks the Korean-default conditional ending |
 | `반환` | ban-hwan | return/give back | returns a value |
 | `변수` | byeon-su | variable (math term) | declares a mutable variable |
 | `상수` | sang-su | constant | declares an immutable constant |

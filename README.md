@@ -42,8 +42,8 @@ Han is a statically-typed, compiled programming language where every keyword is 
 
 ## Features
 
-- **Korean keywords** — `함수`, `만약`, `반복`, `변수` — write logic in Hangul
-- **SOV word order** — `조건 만약 { }`, `조건 동안 { }` — Korean natural sentence structure
+- **Korean keywords** — `함수`, `만약`, `이면`, `반복`, `변수` — write logic in Hangul
+- **Korean word order** — `만약 조건 이면 { }`, `조건 동안 { }` — Korean-default conditionals and natural sentence structure
 - **Korean logical operators** — `그리고` (and), `또는` (or)
 - **Hangul identifiers** — name your variables and functions in Korean
 - **Compiled language** — generates LLVM IR → clang → native binary
@@ -91,17 +91,13 @@ hgl interpret hello.hgl
 # Output: 안녕하세요, 세계!
 ```
 
-Conditionals support both Korean-first SOV and the traditional SVO form:
+Conditionals support both the Korean-default `만약 조건 이면 { }` form and the older minimal form without `이면`. The docs use the Korean-default form:
 
 ```hgl
-// SOV (Korean natural order):
-x > 0 만약 {
+만약 x > 0 이면 {
     출력("양수")
-}
-
-// SVO (traditional):
-만약 x > 0 {
-    출력("양수")
+} 아니면 {
+    출력("0 또는 음수")
 }
 ```
 
@@ -128,12 +124,12 @@ hgl repl
 반복 변수 i = 0; i < 단어들.길이(); i += 1 {
     변수 찾음 = 거짓
     반복 변수 j = 0; j < 단어목록.길이(); j += 1 {
-        만약 단어목록[j] == 단어들[i] {
+        만약 단어목록[j] == 단어들[i] 이면 {
             개수목록[j] = 개수목록[j] + 1
             찾음 = 참
         }
     }
-    만약 찾음 == 거짓 {
+    만약 찾음 == 거짓 이면 {
         단어목록.추가(단어들[i])
         개수목록.추가(1)
     }
@@ -164,7 +160,7 @@ han: 1
         "-" => { 반환 왼쪽 - 오른쪽 }
         "*" => { 반환 왼쪽 * 오른쪽 }
         "/" => {
-            만약 오른쪽 == 0 {
+            만약 오른쪽 == 0 이면 {
                 출력("오류: 0으로 나눌 수 없습니다")
                 반환 0
             }
@@ -202,7 +198,7 @@ han: 1
 함수 출력목록(목록: [할일]) {
     반복 변수 i = 0; i < 목록.길이(); i += 1 {
         변수 상태 = "[ ]"
-        만약 목록[i].완료 {
+        만약 목록[i].완료 이면 {
             상태 = "[✓]"
         }
         출력(형식("{0} {1}. {2}", 상태, i + 1, 목록[i].제목))
@@ -300,7 +296,7 @@ hgl lsp                     Start LSP server (hover + completion)
 - Float/Int auto-coercion — `1 + 1.5 = 2.5`
 
 **Control flow**
-- Conditionals in both SOV and SVO order — `x > 0 만약 { }` and `만약 x > 0 { }`
+- Conditionals in both Korean-default and minimal forms — the docs use `만약 x > 0 이면 { }`, and the older minimal form remains supported
 - `반복` for-loop with init, condition, step
 - `반복 x 안에서 배열` for-in loop — iterates arrays, strings, ranges
 - While loops in both SOV and SVO order — `n < 5 동안 { }` and `동안 n < 5 { }`
@@ -469,7 +465,8 @@ Every keyword in Han is a real Korean word. If you're learning Korean, writing H
 | Code | Pronunciation | Meaning | What it does |
 |------|--------------|---------|-------------|
 | `함수` | ham-su | function (math term) | defines a function |
-| `만약` | man-yak | if/suppose | conditional branch |
+| `만약` | man-yak | if/suppose | starts a conditional |
+| `이면` | i-myeon | then/if-then | marks the Korean-default conditional ending |
 | `반환` | ban-hwan | return/give back | returns a value |
 | `변수` | byeon-su | variable (math term) | declares a mutable variable |
 | `반복` | ban-bok | repetition | for loop |
@@ -478,7 +475,6 @@ Every keyword in Han is a real Korean word. If you're learning Korean, writing H
 | `참` | cham | true/truth | boolean true |
 | `거짓` | geo-jit | false/lie | boolean false |
 | `구조` | gu-jo | structure | defines a struct |
-| `만약` | man-yak | if | starts a conditional |
 | `아니면` | a-ni-myeon | otherwise | else branch |
 | `멈춰` | meom-chwo | stop | break |
 | `계속` | gye-sok | continue | continue |
@@ -545,24 +541,12 @@ With explicit type annotations:
 
 ### Conditionals
 
-SOV (Korean natural order):
+Han still supports the older minimal conditional form, but the Korean-default docs style uses `이면`:
 
 ```hgl
-점수 >= 90 만약 {
+만약 점수 >= 90 이면 {
     출력("A")
-} 아니면 점수 >= 80 만약 {
-    출력("B")
-} 아니면 {
-    출력("C")
-}
-```
-
-SVO (traditional alternative):
-
-```hgl
-만약 점수 >= 90 {
-    출력("A")
-} 아니면 만약 점수 >= 80 {
+} 아니면 점수 >= 80 이면 {
     출력("B")
 } 아니면 {
     출력("C")
@@ -605,10 +589,10 @@ SVO alternative:
 
 ```
 반복 변수 i = 0; i < 100; i += 1 {
-    만약 i == 50 {
+    만약 i == 50 이면 {
         멈춰
     }
-    만약 i % 2 == 0 {
+    만약 i % 2 == 0 이면 {
         계속
     }
     출력(i)
@@ -624,7 +608,7 @@ SVO alternative:
 
 ```
 함수 팩토리얼(n: 정수) -> 정수 {
-    만약 n <= 1 {
+    만약 n <= 1 이면 {
         반환 1
     }
     반환 n * 팩토리얼(n - 1)
@@ -664,7 +648,7 @@ Output: `5050`
 ```
 함수 main() {
     반복 변수 i = 1; i <= 10; i += 1 {
-        만약 i % 2 == 0 {
+        만약 i % 2 == 0 이면 {
             출력("짝수")
         } 아니면 {
             출력("홀수")
@@ -687,6 +671,7 @@ main()
 | `변수` | mutable variable | `let mut` / `var` |
 | `상수` | immutable constant | `const` |
 | `만약` | conditional | `if` |
+| `이면` | conditional marker | `then` / `if-then` |
 | `아니면` | else branch | `else` |
 | `그리고` | and (logical) | `&&` |
 | `또는` | or (logical) | `||` |

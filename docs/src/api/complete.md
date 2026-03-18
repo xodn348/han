@@ -16,6 +16,7 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 변수    → mutable variable (let)
 상수    → immutable constant (const)
 만약    → if
+이면    → then (conditional marker)
 아니면  → else
 그리고  → logical and
 또는    → logical or
@@ -150,23 +151,16 @@ HTTP_보내기(url, body)    → POST request → 문자열
     반환 값
 }
 
-// If/else (SOV default)
-조건 만약 {
+// If/else (Korean-default)
+만약 조건 이면 {
     ...
-} 아니면 조건2 만약 {
+} 아니면 조건2 이면 {
     ...
 } 아니면 {
     ...
 }
 
-// If/else (SVO alternative)
-만약 조건 {
-    ...
-} 아니면 만약 조건2 {
-    ...
-} 아니면 {
-    ...
-}
+// Older minimal form is still supported, but docs prefer the `이면` pattern.
 
 // For loop
 반복 변수 i = 0; i < n; i += 1 {

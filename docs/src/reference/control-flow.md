@@ -2,24 +2,12 @@
 
 ## If / Else-If / Else
 
-SOV (Korean natural order):
+The Korean-default conditional form uses `이면`. The older minimal form is still supported, but the docs use the `이면` style:
 
 ```hgl
-점수 >= 90 만약 {
+만약 점수 >= 90 이면 {
     출력("A")
-} 아니면 점수 >= 80 만약 {
-    출력("B")
-} 아니면 {
-    출력("C")
-}
-```
-
-SVO (traditional alternative):
-
-```hgl
-만약 점수 >= 90 {
-    출력("A")
-} 아니면 만약 점수 >= 80 {
+} 아니면 점수 >= 80 이면 {
     출력("B")
 } 아니면 {
     출력("C")
@@ -29,11 +17,11 @@ SVO (traditional alternative):
 ## Logical Operators
 
 ```hgl
-만약 로그인됨 그리고 관리자 {
+만약 로그인됨 그리고 관리자 이면 {
     출력("관리자 메뉴")
 }
 
-만약 오프라인 또는 점검중 {
+만약 오프라인 또는 점검중 이면 {
     출력("잠시 후 다시 시도하세요")
 }
 ```
@@ -95,8 +83,8 @@ SVO (traditional alternative):
 
 ```
 반복 i 안에서 0..100 {
-    만약 i == 50 { 멈춰 }
-    만약 i % 2 == 0 { 계속 }
+    만약 i == 50 이면 { 멈춰 }
+    만약 i % 2 == 0 이면 { 계속 }
     출력(i)
 }
 ```

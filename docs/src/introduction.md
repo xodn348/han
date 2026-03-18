@@ -16,8 +16,8 @@ Output: `세계님 안녕하세요`
 
 ## Key Features
 
-- **Korean keywords** — `함수`, `만약`, `반복`, `변수`
-- **SOV word order** — `조건 만약 { }`, `조건 동안 { }`
+- **Korean keywords** — `함수`, `만약`, `이면`, `반복`, `변수`
+- **Korean word order** — `만약 조건 이면 { }`, `조건 동안 { }`
 - **String interpolation** — `"${expr}"` auto-desugars to `형식()`
 - **Korean logical operators** — `그리고`, `또는`
 - **Dual execution** — interpreter (`hgl interpret`) and compiler (`hgl build`)
