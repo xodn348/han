@@ -4,6 +4,7 @@ on:
   push:
     branches: [main]
     paths: ['docs/**', 'web/**', 'src/**', 'Cargo.toml']
+  workflow_dispatch:
 
 permissions:
   contents: read
