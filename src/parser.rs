@@ -573,6 +573,81 @@ impl Parser {
         }
     }
 
+    fn parse_string_literal_expr(&self, literal: String, line: usize) -> Result<Expr, ParseError> {
+        if !literal.contains("${") {
+            return Ok(Expr::StringLiteral(literal));
+        }
+
+        let (template, exprs) = self.desugar_interpolation(&literal, line)?;
+        let mut args = Vec::with_capacity(exprs.len() + 1);
+        args.push(Expr::StringLiteral(template));
+        args.extend(exprs);
+
+        Ok(Expr::Call {
+            name: "형식".to_string(),
+            args,
+        })
+    }
+
+    fn desugar_interpolation(
+        &self,
+        literal: &str,
+        line: usize,
+    ) -> Result<(String, Vec<Expr>), ParseError> {
+        let chars: Vec<char> = literal.chars().collect();
+        let mut template = String::new();
+        let mut exprs = Vec::new();
+        let mut index = 0;
+
+        while index < chars.len() {
+            if chars[index] == '$' && chars.get(index + 1) == Some(&'{') {
+                index += 2;
+                let start = index;
+                while index < chars.len() && chars[index] != '}' {
+                    index += 1;
+                }
+
+                if index == chars.len() {
+                    return Err(ParseError::new("문자열 보간 닫는 '}' 필요", line));
+                }
+
+                let expr_source: String = chars[start..index].iter().collect();
+                let expr = self.parse_interpolation_expr(&expr_source, line)?;
+                template.push_str(&format!("{{{}}}", exprs.len()));
+                exprs.push(expr);
+                index += 1;
+                continue;
+            }
+
+            template.push(chars[index]);
+            index += 1;
+        }
+
+        Ok((template, exprs))
+    }
+
+    fn parse_interpolation_expr(&self, expr_source: &str, line: usize) -> Result<Expr, ParseError> {
+        let trimmed = expr_source.trim();
+        if trimmed.is_empty() {
+            return Err(ParseError::new("문자열 보간 식이 비어 있습니다", line));
+        }
+
+        let tokens = crate::lexer::tokenize(trimmed);
+        let meaningful_tokens: Vec<Token> = tokens
+            .into_iter()
+            .map(|token| token.token)
+            .filter(|token| !matches!(token, Token::Newline | Token::Eof))
+            .collect();
+
+        match meaningful_tokens.as_slice() {
+            [Token::Identifier(name)] => Ok(Expr::Identifier(name.clone())),
+            _ => Err(ParseError::new(
+                "문자열 보간은 현재 단순 식별자만 지원합니다",
+                line,
+            )),
+        }
+    }
+
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
         let (line, _) = self.peek_pos();
         let mut expr = match self.peek().clone() {
@@ -586,7 +661,7 @@ impl Parser {
             }
             Token::StringLiteral(s) => {
                 self.advance();
-                Expr::StringLiteral(s)
+                self.parse_string_literal_expr(s, line)?
             }
             Token::참 => {
                 self.advance();
@@ -1267,6 +1342,51 @@ mod tests {
                 }
             }
             _ => panic!("Expected If with else-if chain"),
+        }
+    }
+
+    #[test]
+    fn test_parse_plain_string_literal() {
+        let src = "\"일반 문자열\"";
+        let prog = parse_src(src);
+        match &prog.stmts[0].kind {
+            StmtKind::ExprStmt(Expr::StringLiteral(s)) => assert_eq!(s, "일반 문자열"),
+            _ => panic!("Expected ExprStmt(StringLiteral)"),
+        }
+    }
+
+    #[test]
+    fn test_parse_interpolated_string_in_var_decl() {
+        let src = "변수 메시지 = \"이름: ${이름}, 나이: ${나이}\"";
+        let prog = parse_src(src);
+        match &prog.stmts[0].kind {
+            StmtKind::VarDecl { value, .. } => match value {
+                Expr::Call { name, args } => {
+                    assert_eq!(name, "형식");
+                    assert_eq!(args.len(), 3);
+                    assert!(matches!(&args[0], Expr::StringLiteral(template) if template == "이름: {0}, 나이: {1}"));
+                    assert!(matches!(&args[1], Expr::Identifier(name) if name == "이름"));
+                    assert!(matches!(&args[2], Expr::Identifier(name) if name == "나이"));
+                }
+                _ => panic!("Expected interpolated string to desugar into Call"),
+            },
+            _ => panic!("Expected VarDecl"),
+        }
+    }
+
+    #[test]
+    fn test_parse_multiple_interpolations() {
+        let src = "\"${a} + ${b}\"";
+        let prog = parse_src(src);
+        match &prog.stmts[0].kind {
+            StmtKind::ExprStmt(Expr::Call { name, args }) => {
+                assert_eq!(name, "형식");
+                assert_eq!(args.len(), 3);
+                assert!(matches!(&args[0], Expr::StringLiteral(template) if template == "{0} + {1}"));
+                assert!(matches!(&args[1], Expr::Identifier(name) if name == "a"));
+                assert!(matches!(&args[2], Expr::Identifier(name) if name == "b"));
+            }
+            _ => panic!("Expected ExprStmt(Call)"),
         }
     }
 
