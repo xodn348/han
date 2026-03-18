@@ -31,22 +31,32 @@ enum Commands {
     Lsp,
 }
 
+fn format_error(source: &str, line: usize, category: &str, message: &str) {
+    let lines: Vec<&str> = source.lines().collect();
+    eprintln!();
+    eprintln!("── {} ──────────────────────────────", category);
+    eprintln!();
+    if line > 0 && line <= lines.len() {
+        let src_line = lines[line - 1];
+        eprintln!("{:>4} │   {}", line, src_line);
+        eprintln!("     │");
+    }
+    eprintln!("{}", message);
+    eprintln!();
+}
+
 fn run_pipeline(source: &str) -> ast::Program {
     let tokens = lexer::tokenize(source);
     match parser::parse(tokens) {
         Ok(program) => {
             let type_errors = typechecker::check(&program);
             for err in &type_errors {
-                if err.line > 0 {
-                    eprintln!("[타입 경고] {}번째 줄: {}", err.line, err.message);
-                } else {
-                    eprintln!("[타입 경고] {}", err.message);
-                }
+                format_error(source, err.line, "타입 경고", &err.message);
             }
             program
         }
         Err(e) => {
-            eprintln!("[파서 에러] {}번째 줄: {}", e.line, e.message);
+            format_error(source, e.line, "문법 오류", &e.message);
             process::exit(1);
         }
     }
