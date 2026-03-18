@@ -154,7 +154,16 @@ fn test_compiled_backend_array_method_length() {
 }
 
 #[test]
-#[ignore = "codegen: method call codegen not yet implemented"]
+fn test_compiled_backend_tuple_index_reads_stored_values() {
+    let out = build_and_run(
+        "변수 t = (11, 22, 33)\n출력(t.0)\n출력(t.2)\n",
+        "han_tuple_index",
+    );
+
+    assert_eq!(out, "11\n33");
+}
+
+#[test]
 fn test_compiled_backend_struct_impl_method_call() {
     let out = build_and_run(
         "구조 Rect { width: 정수, height: 정수 }\n구현 Rect {\n    함수 area(자신: Rect) -> 정수 {\n        반환 자신.width * 자신.height\n    }\n}\n변수 rect: Rect = Rect { width: 2, height: 3 }\n출력(rect.area())\n",

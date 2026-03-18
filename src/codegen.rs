@@ -21,6 +21,7 @@ pub struct CodeGen {
     str_count: usize,
     loop_stack: Vec<(String, String)>,
     var_types: HashMap<String, &'static str>,
+    struct_var_types: HashMap<String, String>,
     lambda_bindings: HashMap<String, LambdaBinding>,
     struct_defs: HashMap<String, Vec<String>>,
     enum_defs: HashMap<String, Vec<String>>,
@@ -38,6 +39,7 @@ impl CodeGen {
             str_count: 0,
             loop_stack: Vec::new(),
             var_types: HashMap::new(),
+            struct_var_types: HashMap::new(),
             lambda_bindings: HashMap::new(),
             struct_defs: HashMap::new(),
             enum_defs: HashMap::new(),
@@ -109,9 +111,35 @@ impl CodeGen {
             Type::불 => "i1",
             Type::없음 => "void",
             Type::배열(_) => "i64*",
-            Type::구조체(_) => "i8*",
+            Type::구조체(_) => "i64*",
             Type::함수타입 => "i8*",
-            Type::튜플(_) => "i8*",
+            Type::튜플(_) => "i64*",
+        }
+    }
+
+    fn bind_type(&mut self, name: &str, ty: &Type) {
+        self.var_types.insert(name.to_string(), Self::llvm_type(ty));
+        match ty {
+            Type::구조체(struct_name) => {
+                self.struct_var_types
+                    .insert(name.to_string(), struct_name.clone());
+            }
+            _ => {
+                self.struct_var_types.remove(name);
+            }
+        }
+    }
+
+    fn bind_llvm_type(&mut self, name: &str, llvm_ty: &'static str) {
+        self.var_types.insert(name.to_string(), llvm_ty);
+        self.struct_var_types.remove(name);
+    }
+
+    fn struct_name_for_expr(&self, expr: &Expr) -> Option<String> {
+        match expr {
+            Expr::Identifier(name) => self.struct_var_types.get(name.as_str()).cloned(),
+            Expr::StructLiteral { name, .. } => Some(name.clone()),
+            _ => None,
         }
     }
 
@@ -140,8 +168,10 @@ impl CodeGen {
             Expr::Identifier(name) => self.var_types.get(name.as_str()).copied().unwrap_or("i64"),
             Expr::Call { name, .. } => self.var_types.get(name.as_str()).copied().unwrap_or("i64"),
             Expr::ArrayLiteral(_) => "i64*",
+            Expr::StructLiteral { .. } => "i64*",
+            Expr::TupleLiteral(_) => "i64*",
             Expr::Range { .. } => "i64*",
-            Expr::Index { .. } => "i64",
+            Expr::Index { .. } | Expr::TupleIndex { .. } => "i64",
             _ => "i64",
         }
     }
@@ -1094,6 +1124,7 @@ impl CodeGen {
                 let lambda_name = format!("__lambda_{}", self.fresh_label());
                 let saved_output = std::mem::take(&mut self.output);
                 let saved_vars = self.var_types.clone();
+                let saved_struct_vars = self.struct_var_types.clone();
                 let saved_lambda_bindings = self.lambda_bindings.clone();
                 let saved_error_flag = self.current_error_flag.clone();
                 let saved_error_msg = self.current_error_message.clone();
@@ -1123,6 +1154,7 @@ impl CodeGen {
 
                 let lambda_output = std::mem::replace(&mut self.output, saved_output);
                 self.var_types = saved_vars;
+                self.struct_var_types = saved_struct_vars;
                 self.lambda_bindings = saved_lambda_bindings;
                 self.current_error_flag = saved_error_flag;
                 self.current_error_message = saved_error_msg;
@@ -1161,7 +1193,7 @@ impl CodeGen {
                     }
                     _ => {
                         let arg_vals: Vec<String> = args.iter().map(|a| self.gen_expr(a)).collect();
-                        let mut all_args = vec![format!("i64 {}", obj_val)];
+                        let mut all_args = vec![format!("{} {}", obj_ty, obj_val)];
                         for av in &arg_vals {
                             all_args.push(format!("i64 {}", av));
                         }
@@ -1176,25 +1208,50 @@ impl CodeGen {
                 }
                 t
             }
-            Expr::TupleLiteral(_) | Expr::TupleIndex { .. } | Expr::MapLiteral(_) => {
+            Expr::TupleLiteral(elems) => {
+                let byte_size = elems.len() * 8;
+                let mem = self.fresh_temp();
+                self.emit(&format!("  {} = call i8* @malloc(i64 {})", mem, byte_size));
+                let data_ptr = self.fresh_temp();
+                self.emit(&format!("  {} = bitcast i8* {} to i64*", data_ptr, mem));
+
+                for (index, elem) in elems.iter().enumerate() {
+                    let val = self.gen_expr(elem);
+                    let elem_ptr = self.fresh_temp();
+                    self.emit(&format!(
+                        "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
+                        elem_ptr, data_ptr, index
+                    ));
+                    self.emit(&format!("  store i64 {}, i64* {}", val, elem_ptr));
+                }
+
+                data_ptr
+            }
+            Expr::TupleIndex { object, index } => {
+                let obj_ptr = self.gen_expr(object);
+                let elem_ptr = self.fresh_temp();
+                self.emit(&format!(
+                    "  {} = getelementptr inbounds i64, i64* {}, i64 {}",
+                    elem_ptr, obj_ptr, index
+                ));
+                let val = self.fresh_temp();
+                self.emit(&format!("  {} = load i64, i64* {}", val, elem_ptr));
+                val
+            }
+            Expr::MapLiteral(_) => {
                 let t = self.fresh_temp();
-                self.emit(&format!("  {} = add nsw i64 0, 0", t));
+                self.emit(&format!(
+                    "  {} = add nsw i64 0, 0 ; Map not supported in compiled mode",
+                    t
+                ));
                 t
             }
         }
     }
 
     fn guess_struct_type(&self, expr: &Expr) -> String {
-        if let Expr::Identifier(name) = expr {
-            for (sname, _) in &self.struct_defs {
-                if self.var_types.get(name.as_str()).is_some() {
-                    return sname.clone();
-                }
-            }
-            name.clone()
-        } else {
-            "unknown".to_string()
-        }
+        self.struct_name_for_expr(expr)
+            .unwrap_or_else(|| "unknown".to_string())
     }
 
     fn resolve_enum_tag(&self, variant: &str) -> Option<usize> {
@@ -1207,11 +1264,9 @@ impl CodeGen {
     }
 
     fn find_field_index(&self, object: &Expr, field: &str) -> usize {
-        if let Expr::Identifier(name) = object {
-            if let Some(struct_name) = self.var_types.get(name.as_str()) {
-                if let Some(fields) = self.struct_defs.get(*struct_name) {
-                    return fields.iter().position(|f| f == field).unwrap_or(0);
-                }
+        if let Some(struct_name) = self.struct_name_for_expr(object) {
+            if let Some(fields) = self.struct_defs.get(&struct_name) {
+                return fields.iter().position(|f| f == field).unwrap_or(0);
             }
         }
         0
@@ -1327,7 +1382,11 @@ impl CodeGen {
                     _ => None,
                 };
                 let val = self.gen_expr(value);
-                self.var_types.insert(name.clone(), llvm_ty);
+                if let Some(ty) = ty.as_ref() {
+                    self.bind_type(name, ty);
+                } else {
+                    self.bind_llvm_type(name, llvm_ty);
+                }
                 self.emit(&format!("  {} = alloca {}", Self::var_ptr(name), llvm_ty));
                 match value {
                     Expr::Lambda { .. } => {
@@ -1631,6 +1690,7 @@ impl CodeGen {
             .join(", ");
 
         self.var_types.clear();
+        self.struct_var_types.clear();
         self.lambda_bindings.clear();
         self.emit(&format!(
             "define {} @{}({}) {{",
@@ -1643,7 +1703,7 @@ impl CodeGen {
 
         for (pname, pty) in params {
             let llvm_ty = Self::llvm_type(pty);
-            self.var_types.insert(pname.clone(), llvm_ty);
+            self.bind_type(pname, pty);
             self.emit(&format!("  {} = alloca {}", Self::var_ptr(pname), llvm_ty));
             self.emit(&format!(
                 "  store {} %{}, {}* {}",
@@ -1674,6 +1734,7 @@ impl CodeGen {
 
     pub fn generate(&mut self, program: &Program) -> String {
         let mut func_defs: Vec<&Stmt> = Vec::new();
+        let mut impl_defs: Vec<&Stmt> = Vec::new();
         let mut top_level: Vec<&Stmt> = Vec::new();
         let mut has_main = false;
 
@@ -1700,6 +1761,7 @@ impl CodeGen {
                     self.var_types.insert(name.clone(), ret_ty);
                     func_defs.push(stmt);
                 }
+                StmtKind::ImplBlock { .. } => impl_defs.push(stmt),
                 _ => top_level.push(stmt),
             }
         }
@@ -1716,7 +1778,14 @@ impl CodeGen {
             }
         }
 
+        for stmt in &impl_defs {
+            self.gen_stmt(stmt);
+        }
+
         if !top_level.is_empty() && !has_main {
+            self.var_types.clear();
+            self.struct_var_types.clear();
+            self.lambda_bindings.clear();
             self.emit("define i32 @main() {");
             self.emit("entry:");
             self.init_error_state();
