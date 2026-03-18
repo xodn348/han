@@ -3,6 +3,8 @@ pub mod codegen;
 pub mod interpreter;
 pub mod lexer;
 pub mod parser;
+#[cfg(feature = "python")]
+pub mod python_interop;
 pub mod typechecker;
 
 #[cfg(target_arch = "wasm32")]

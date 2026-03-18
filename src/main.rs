@@ -5,6 +5,8 @@ mod interpreter;
 mod lexer;
 mod lsp;
 mod parser;
+#[cfg(feature = "python")]
+mod python_interop;
 mod typechecker;
 
 use clap::{Parser, Subcommand};

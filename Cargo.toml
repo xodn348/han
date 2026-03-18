@@ -14,7 +14,8 @@ path = "src/lib.rs"
 
 [features]
 default = ["native"]
-native = ["reqwest"]
+native = ["reqwest", "python"]
+python = ["pyo3"]
 
 [dependencies]
 clap = { version = "4.5.60", features = ["derive"] }
@@ -22,6 +23,7 @@ serde_json = "1"
 regex = "1"
 chrono = { version = "0.4", features = ["wasmbind"] }
 reqwest = { version = "0.12", features = ["blocking"], optional = true }
+pyo3 = { version = "0.24", features = ["auto-initialize"], optional = true }
 
 [target.'cfg(target_arch = "wasm32")'.dependencies]
 wasm-bindgen = "0.2"

@@ -1463,6 +1463,37 @@ fn eval_builtin_math(
             }
             Ok(Some(Value::Float(std::f64::consts::E)))
         }
+        #[cfg(feature = "python")]
+        "파이썬" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new(
+                    "파이썬: 인자 1개 필요 (Python 코드 문자열)",
+                    line,
+                ));
+            }
+            let code = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("파이썬: 문자열 필요", line)),
+            };
+            match crate::python_interop::run_python(&code) {
+                Ok(result) => Ok(Some(Value::Str(result))),
+                Err(e) => Err(RuntimeError::new(format!("파이썬 에러: {}", e), line)),
+            }
+        }
+        #[cfg(feature = "python")]
+        "파이썬_값" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("파이썬_값: 인자 1개 필요", line));
+            }
+            let code = match eval_expr(&args[0], env, line)? {
+                Value::Str(s) => s,
+                _ => return Err(RuntimeError::new("파이썬_값: 문자열 필요", line)),
+            };
+            match crate::python_interop::eval_python(&code) {
+                Ok(val) => Ok(Some(val)),
+                Err(e) => Err(RuntimeError::new(format!("파이썬 에러: {}", e), line)),
+            }
+        }
         "행렬곱" => {
             if args.len() != 2 {
                 return Err(RuntimeError::new("행렬곱: 인자 2개 필요 (A, B)", line));
