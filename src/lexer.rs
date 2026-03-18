@@ -25,6 +25,7 @@ pub enum Token {
     맞춤,
     열거,
     안에서,
+    이면,
     DotDot,     // ..
     화살표이중, // =>
     구현,
@@ -123,6 +124,7 @@ pub fn get_keyword_map() -> HashMap<String, Token> {
     map.insert("구현".to_string(), Token::구현);
     map.insert("열거".to_string(), Token::열거);
     map.insert("안에서".to_string(), Token::안에서);
+    map.insert("이면".to_string(), Token::이면);
     map.insert("그리고".to_string(), Token::AmpAmp);
     map.insert("또는".to_string(), Token::PipePipe);
     // 타입 키워드

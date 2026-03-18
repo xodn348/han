@@ -161,7 +161,7 @@ impl Parser {
             _ => {
                 let expr = self.parse_expr()?;
                 match self.peek().clone() {
-                    Token::만약 => {
+                    Token::이면 | Token::만약 => {
                         self.advance();
                         self.parse_if_with_cond(span, expr)
                     }
@@ -285,6 +285,9 @@ impl Parser {
         self.no_struct_literal = true;
         let cond = self.parse_expr()?;
         self.no_struct_literal = false;
+        if matches!(self.peek(), Token::이면) {
+            self.advance();
+        }
         self.parse_if_with_cond(span, cond)
     }
 
@@ -293,12 +296,30 @@ impl Parser {
 
         let else_block = if matches!(self.peek(), Token::아니면) {
             self.advance();
-            // 아니면 만약 → else-if chaining
             if matches!(self.peek(), Token::만약) {
+                // SVO else-if: 아니면 만약 expr { }
                 let nested_if = self.parse_if_stmt()?;
                 Some(vec![nested_if])
-            } else {
+            } else if matches!(self.peek(), Token::LBrace) {
+                // else block: 아니면 { }
                 Some(self.parse_block()?)
+            } else {
+                // SOV else-if: 아니면 expr 만약 { }
+                let else_span = self.span_here();
+                self.no_struct_literal = true;
+                let else_cond = self.parse_expr()?;
+                self.no_struct_literal = false;
+                if matches!(self.peek(), Token::이면 | Token::만약) {
+                    self.advance();
+                    let nested_if = self.parse_if_with_cond(else_span, else_cond)?;
+                    Some(vec![nested_if])
+                } else {
+                    let err_line = self.span_here().line;
+                    return Err(ParseError::new(
+                        "아니면 뒤에 '이면', '만약' 또는 '{' 필요",
+                        err_line,
+                    ));
+                }
             }
         } else {
             None
