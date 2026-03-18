@@ -7,7 +7,7 @@ hgl repl
 ```
 
 ```
-Han (한) REPL v0.1.0
+Han (한) REPL v0.2.0
 종료: Ctrl+D 또는 '나가기' 입력
 
 한> 변수 x = 42

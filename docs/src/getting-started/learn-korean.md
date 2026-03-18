@@ -24,9 +24,11 @@ Every keyword in Han is a real Korean word. If you're learning Korean, writing H
 | `멈춰` | meom-chwo | stop | break |
 | `계속` | gye-sok | continue | continue |
 | `시도` | si-do | attempt | try block |
-| `실패` | sil-pae | failure | catch block |
+| `처리` | cheo-ri | handling/process | catch block |
 | `맞춤` | mat-chwo | match/fit | pattern matching |
-| `포함` | ga-jyeo-o-gi | bring/import | import module |
+| `포함` | po-ham | include/contain | import module |
+| `그리고` | geu-ri-go | and (conjunction) | logical AND |
+| `또는` | tto-neun | or (alternative) | logical OR |
 | `안에서` | an-e-seo | inside/within | for-in iteration |
 
 ## Method Names
@@ -56,9 +58,9 @@ Array and string methods are also real Korean verbs:
 
 ## Example: Reading Han Code as Korean
 
-```
+```hgl
 함수 인사(이름: 문자열) {
-    출력(형식("안녕하세요, {0}!", 이름))
+    출력("${이름}님 안녕하세요")
 }
 ```
 
@@ -66,6 +68,7 @@ Reading this as Korean:
 - `함수` (function) `인사` (greeting) — "define a greeting function"
 - `이름` (name): `문자열` (string) — "parameter: name of type string"  
 - `출력` (output) — "print"
+- `${이름}` — insert the `이름` variable into the string
 - `안녕하세요` (annyeonghaseyo) — "hello" (formal)
 
 Every line is readable Korean.

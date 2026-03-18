@@ -16,4 +16,12 @@
 // → "이름: 홍길동, 나이: 30"
 ```
 
-Named mode substitutes `{변수명}` with the variable's value from the current scope.
+## String Interpolation
+
+```hgl
+변수 이름 = "홍길동"
+출력("${이름}님 안녕하세요")
+// desugars to: 출력(형식("{0}님 안녕하세요", 이름))
+```
+
+Named mode substitutes `{변수명}` with the variable's value from the current scope. Interpolated strings are automatically desugared to `형식()`.

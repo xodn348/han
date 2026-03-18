@@ -2,13 +2,39 @@
 
 ## If / Else-If / Else
 
+SOV (Korean natural order):
+
+```hgl
+점수 >= 90 만약 {
+    출력("A")
+} 아니면 점수 >= 80 만약 {
+    출력("B")
+} 아니면 {
+    출력("C")
+}
 ```
+
+SVO (traditional alternative):
+
+```hgl
 만약 점수 >= 90 {
     출력("A")
 } 아니면 만약 점수 >= 80 {
     출력("B")
 } 아니면 {
     출력("C")
+}
+```
+
+## Logical Operators
+
+```hgl
+만약 로그인됨 그리고 관리자 {
+    출력("관리자 메뉴")
+}
+
+만약 오프라인 또는 점검중 {
+    출력("잠시 후 다시 시도하세요")
 }
 ```
 
@@ -45,7 +71,19 @@ Iterate over ranges:
 
 ## While Loop
 
+SOV:
+
+```hgl
+변수 n = 0
+n < 5 동안 {
+    출력(n)
+    n += 1
+}
 ```
+
+SVO (traditional alternative):
+
+```hgl
 변수 n = 0
 동안 n < 5 {
     출력(n)

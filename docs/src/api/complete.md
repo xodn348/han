@@ -4,7 +4,7 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 
 ## Language: Han (한)
 ## File Extension: .hgl
-## Execution: `hgl interpret <file>` or `hgl build <file>`
+## Execution: `hgl interpret <file>`, `hgl build <file>`, `hgl check <file>`, or `hgl init [name]`
 
 ---
 
@@ -17,6 +17,8 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 상수    → immutable constant (const)
 만약    → if
 아니면  → else
+그리고  → logical and
+또는    → logical or
 반복    → for loop
 동안    → while loop
 멈춰    → break
@@ -26,9 +28,9 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 구현    → impl block
 열거    → enum definition
 시도    → try
-실패    → catch
+처리    → catch
 맞춤    → match (pattern matching)
-포함 → import
+포함    → import
 참      → true
 거짓    → false
 없음    → null/void
@@ -51,7 +53,8 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 ```
 +  -  *  /  %           → arithmetic
 == !=  <  >  <=  >=     → comparison
-&& ||  !                → logical
+&& || !                 → logical
+그리고 또는              → Korean logical aliases
 =  +=  -=  *=  /=       → assignment
 ->                      → return type arrow
 =>                      → match arm arrow
@@ -72,7 +75,7 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 정수변환(x)              → int(x) → 정수
 실수변환(x)              → float(x) → 실수
 길이(s)                  → len(s) → 정수
-형식(template, args...)  → format string → 문자열
+형식(template, args...)  → format string / interpolation target → 문자열
 파일읽기(경로)            → read file → 문자열
 파일쓰기(경로, 내용)      → write file
 파일추가(경로, 내용)      → append to file
@@ -145,7 +148,16 @@ HTTP_보내기(url, body)    → POST request → 문자열
     반환 값
 }
 
-// If/else
+// If/else (SOV default)
+조건 만약 {
+    ...
+} 아니면 조건2 만약 {
+    ...
+} 아니면 {
+    ...
+}
+
+// If/else (SVO alternative)
 만약 조건 {
     ...
 } 아니면 만약 조건2 {
@@ -164,7 +176,12 @@ HTTP_보내기(url, body)    → POST request → 문자열
     ...
 }
 
-// While
+// While (SOV default)
+조건 동안 {
+    ...
+}
+
+// While (SVO alternative)
 동안 조건 {
     ...
 }
