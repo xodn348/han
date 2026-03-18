@@ -43,11 +43,15 @@ Han is a statically-typed, compiled programming language where every keyword is 
 ## Features
 
 - **Korean keywords** — `함수`, `만약`, `반복`, `변수` — write logic in Hangul
+- **SOV word order** — `조건 만약 { }`, `조건 동안 { }` — Korean natural sentence structure
+- **Korean logical operators** — `그리고` (and), `또는` (or)
 - **Hangul identifiers** — name your variables and functions in Korean
 - **Compiled language** — generates LLVM IR → clang → native binary
 - **Interpreter mode** — run instantly without clang
 - **REPL** — interactive mode with `hgl repl`
 - **LSP server** — `hgl lsp` for editor hover docs and completion
+- **`hgl check`** — type-check without running
+- **`hgl init`** — project scaffolding
 - **Static typing** — 5 primitive types: `정수` (int), `실수` (float), `문자열` (string), `불` (bool), `없음` (void)
 - **Arrays** — `[1, 2, 3]`, indexing, negative indexing, `.추가/.삭제/.정렬/.역순` etc.
 - **Structs** — `구조 사람 { 이름: 문자열 }` with field access and impl blocks
@@ -56,6 +60,7 @@ Han is a statically-typed, compiled programming language where every keyword is 
 - **Error handling** — `시도 { } 처리(오류) { }` try/catch
 - **File I/O** — `파일읽기`, `파일쓰기`, `파일추가`, `파일존재`
 - **Format strings** — `형식("이름: {0}", 이름)` positional or `형식("이름: {이름}")` named
+- **String interpolation** — `"${expr}"` auto-desugars to `형식()`
 - **String methods** — `.분리`, `.포함`, `.바꾸기`, `.대문자`, `.소문자`, etc.
 - **Module imports** — `포함 "파일.hgl"`
 - **Generics syntax** — `함수 최대값<T>(a: T, b: T) -> T`
@@ -84,6 +89,20 @@ Run it:
 ```bash
 hgl interpret hello.hgl
 # Output: 안녕하세요, 세계!
+```
+
+Conditionals support both Korean-first SOV and the traditional SVO form:
+
+```hgl
+// SOV (Korean natural order):
+x > 0 만약 {
+    출력("양수")
+}
+
+// SVO (traditional):
+만약 x > 0 {
+    출력("양수")
+}
 ```
 
 Or jump into the REPL:
@@ -257,6 +276,8 @@ This installs `hgl` globally and automatically sets up the VS Code extension (sy
 hgl interpret <file.hgl>    Run with interpreter (no clang needed)
 hgl build <file.hgl>        Compile to native binary (requires clang)
 hgl run <file.hgl>          Compile and run immediately
+hgl check <file.hgl>        Type-check only (no execution)
+hgl init [name]             Create new Han project
 hgl repl                    Interactive REPL
 hgl lsp                     Start LSP server (hover + completion)
 ```
@@ -279,11 +300,12 @@ hgl lsp                     Start LSP server (hover + completion)
 - Float/Int auto-coercion — `1 + 1.5 = 2.5`
 
 **Control flow**
-- `만약` / `아니면 만약` / `아니면` (if / else-if / else)
+- Conditionals in both SOV and SVO order — `x > 0 만약 { }` and `만약 x > 0 { }`
 - `반복` for-loop with init, condition, step
 - `반복 x 안에서 배열` for-in loop — iterates arrays, strings, ranges
-- `동안` while-loop
+- While loops in both SOV and SVO order — `n < 5 동안 { }` and `동안 n < 5 { }`
 - `멈춰` (break), `계속` (continue)
+- `그리고` / `또는` logical operators — Korean aliases for `&&` / `||`
 - `맞춤` pattern matching — integer, string, bool, wildcard `_`, binding
 - Range operator — `0..10` creates `[0, 1, 2, ..., 9]`
 
@@ -296,6 +318,7 @@ hgl lsp                     Start LSP server (hover + completion)
 
 **Strings**
 - Concatenation with `+`
+- Interpolation — `"${이름}님 안녕하세요"` desugars to `형식()`
 - Methods: `.분리(sep)`, `.포함(s)`, `.바꾸기(from, to)`, `.앞뒤공백제거()`, `.대문자()`, `.소문자()`, `.시작(s)`, `.끝(s)`, `.길이()`
 - Character indexing — `문자열[0]`, negative: `문자열[-1]`
 - Method chaining — `"hello world".대문자().분리(" ")`
@@ -318,10 +341,12 @@ hgl lsp                     Start LSP server (hover + completion)
 
 **Error handling**
 - `시도 { } 처리(오류) { }` — catches any runtime error including division by zero, file not found, out-of-bounds
+- Elm-style error messages include source context for faster debugging
 - Stack traces on function call errors
 
 **Type safety**
 - Compile-time type checker — `변수 x: 정수 = "hello"` → error
+- `hgl check <file.hgl>` validates types without executing the program
 - Return type validation — wrong return type detected before execution
 
 **JSON** (serde_json)
@@ -397,8 +422,7 @@ hgl lsp                     Start LSP server (hover + completion)
 
 | Feature | Status |
 |---------|--------|
-| `hgl build` with closures/lambdas | Function pointer indirect call — in progress |
-| `hgl build` with string/array methods | Method call codegen — in progress |
+| `hgl build` enum match lowering | Enum variant IR generation is still in progress |
 
 ---
 
@@ -461,6 +485,8 @@ Every keyword in Han is a real Korean word. If you're learning Korean, writing H
 | `처리` | cheo-ri | handling/processing | catch block |
 | `맞춤` | mat-chum | matching/fit | pattern match |
 | `포함` | po-ham | include/contain | import module |
+| `그리고` | geu-ri-go | and (conjunction) | logical AND |
+| `또는` | tto-neun | or (alternative) | logical OR |
 
 Reading Han code is reading Korean. Every identifier, every keyword, every method name — it's all real language.
 
@@ -518,7 +544,21 @@ With explicit type annotations:
 
 ### Conditionals
 
+SOV (Korean natural order):
+
+```hgl
+점수 >= 90 만약 {
+    출력("A")
+} 아니면 점수 >= 80 만약 {
+    출력("B")
+} 아니면 {
+    출력("C")
+}
 ```
+
+SVO (traditional alternative):
+
+```hgl
 만약 점수 >= 90 {
     출력("A")
 } 아니면 만약 점수 >= 80 {
@@ -540,7 +580,19 @@ With explicit type annotations:
 
 **While loop** (`동안`):
 
+SOV:
+
+```hgl
+변수 n = 0
+n < 5 동안 {
+    출력(n)
+    n += 1
+}
 ```
+
+SVO alternative:
+
+```hgl
 변수 n = 0
 동안 n < 5 {
     출력(n)
@@ -635,6 +687,8 @@ main()
 | `상수` | immutable constant | `const` |
 | `만약` | conditional | `if` |
 | `아니면` | else branch | `else` |
+| `그리고` | and (logical) | `&&` |
+| `또는` | or (logical) | `||` |
 | `반복` | for loop | `for` |
 | `동안` | while loop | `while` |
 | `멈춰` | break loop | `break` |
@@ -662,7 +716,7 @@ main()
 | `+`, `-`, `*`, `/`, `%` | Arithmetic |
 | `==`, `!=` | Equality |
 | `<`, `>`, `<=`, `>=` | Comparison |
-| `&&`, `\|\|`, `!` | Logical |
+| `&&`, `\|\|`, `!`, `그리고`, `또는` | Logical |
 | `=`, `+=`, `-=`, `*=`, `/=` | Assignment |
 
 </details>
@@ -738,7 +792,7 @@ Rust's enum types map naturally to AST nodes and token variants. Pattern matchin
 cargo test
 ```
 
-59 tests (51 unit + 8 integration) covering the lexer, parser, AST, interpreter, type checker, and code generator.
+`cargo test` currently covers the lexer, parser, AST, interpreter, type checker, compiled backend, and integration scenarios such as closure capture, struct impl methods, tuples, and SOV parsing.
 
 ---
 
