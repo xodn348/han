@@ -7,6 +7,13 @@
 | `거듭제곱(밑, 지수)` | Power | `거듭제곱(2, 10)` | `1024.0` |
 | `행렬곱(A, B)` | Matrix multiply | `행렬곱(A, B)` | `[[실수]]` |
 | `전치(A)` | Matrix transpose | `전치(A)` | `[[실수]]` |
+| `스칼라곱(A, s)` | Scalar multiply | `스칼라곱(A, 2.0)` | `[[실수]]` |
+| `행렬합(A, B)` | Matrix addition | `행렬합(A, B)` | `[[실수]]` |
+| `행렬차(A, B)` | Matrix subtraction | `행렬차(A, B)` | `[[실수]]` |
+| `내적(a, b)` | Dot product | `내적([1,2], [3,4])` | `11.0` |
+| `외적(a, b)` | Cross product (3D) | `외적([1,0,0], [0,1,0])` | `[0,0,1]` |
+| `단위행렬(n)` | Identity matrix | `단위행렬(3)` | `[[1,0,0],...]` |
+| `텐서곱(A, B)` | Tensor/Kronecker product | `텐서곱(A, B)` | `[[실수]]` |
 
 All math functions accept both `정수` and `실수` inputs.
 

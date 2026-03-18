@@ -78,6 +78,13 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 길이(s)                  → len(s) → 정수
 행렬곱(A, B)             → matrix multiply → [[실수]]
 전치(A)                  → matrix transpose → [[실수]]
+스칼라곱(A, s)           → scalar multiply → [[실수]]
+행렬합(A, B)             → matrix addition → [[실수]]
+행렬차(A, B)             → matrix subtraction → [[실수]]
+내적(a, b)               → dot product → 실수
+외적(a, b)               → cross product (3D) → [실수]
+단위행렬(n)              → identity matrix → [[실수]]
+텐서곱(A, B)             → tensor/Kronecker product → [[실수]]
 형식(template, args...)  → format string / interpolation target → 문자열
 파일읽기(경로)            → read file → 문자열
 파일쓰기(경로, 내용)      → write file
