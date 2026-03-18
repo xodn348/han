@@ -25,6 +25,8 @@ enum Commands {
     Build { file: String },
     Run { file: String },
     Interpret { file: String },
+    Check { file: String },
+    Init { name: Option<String> },
     Repl,
     Lsp,
 }
@@ -298,6 +300,57 @@ fn main() {
                     process::exit(1);
                 }
             }
+        }
+
+        Commands::Check { file } => {
+            let source = fs::read_to_string(&file).unwrap_or_else(|e| {
+                eprintln!("파일 읽기 실패 '{}': {}", file, e);
+                process::exit(1);
+            });
+
+            let tokens = lexer::tokenize(&source);
+            match parser::parse(tokens) {
+                Ok(program) => {
+                    let type_errors = typechecker::check(&program);
+                    if type_errors.is_empty() {
+                        println!("✓ 타입 검사 통과");
+                    } else {
+                        for err in &type_errors {
+                            if err.line > 0 {
+                                eprintln!("[타입 경고] {}번째 줄: {}", err.line, err.message);
+                            } else {
+                                eprintln!("[타입 경고] {}", err.message);
+                            }
+                        }
+                        process::exit(1);
+                    }
+                }
+                Err(e) => {
+                    eprintln!("[파서 에러] {}번째 줄: {}", e.line, e.message);
+                    process::exit(1);
+                }
+            }
+        }
+
+        Commands::Init { name } => {
+            let dir = name.as_deref().unwrap_or(".");
+            if dir != "." {
+                fs::create_dir_all(dir).unwrap_or_else(|e| {
+                    eprintln!("디렉토리 생성 실패: {}", e);
+                    process::exit(1);
+                });
+            }
+            let main_path = if dir == "." {
+                "main.hgl".to_string()
+            } else {
+                format!("{}/main.hgl", dir)
+            };
+            let content = "// Han 프로그래밍 언어\n// 자세한 내용: https://github.com/xodn348/han\n\n함수 main() {\n    출력(\"안녕하세요!\")\n}\n\nmain()\n";
+            fs::write(&main_path, content).unwrap_or_else(|e| {
+                eprintln!("파일 생성 실패: {}", e);
+                process::exit(1);
+            });
+            println!("✓ 프로젝트 초기화 완료: {}", main_path);
         }
 
         Commands::Repl => {
