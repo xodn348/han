@@ -34,7 +34,7 @@ impl TypeEnv {
 
 fn array_element_type(items: &[Expr], env: &TypeEnv) -> Option<Type> {
     if items.is_empty() {
-        return Some(Type::정수);
+        return None;
     }
 
     let mut inferred_type = infer_expr_type(&items[0], env)?;
