@@ -45,9 +45,11 @@ Han is a statically-typed, compiled programming language where every keyword is 
 - **Korean keywords** — `함수`, `만약`, `이면`, `반복`, `변수` — write logic in Hangul
 - **Korean word order** — `만약 조건 이면 { }`, `조건 동안 { }` — Korean-default conditionals and natural sentence structure
 - **Korean logical operators** — `그리고` (and), `또는` (or)
+- **Pipe operator** — `값 |> 함수1 |> 함수2`
 - **Hangul identifiers** — name your variables and functions in Korean
 - **Compiled language** — generates LLVM IR → clang → native binary
 - **Interpreter mode** — run instantly without clang
+- **Python interop** — `파이썬()` / `파이썬_값()` for NumPy, PyTorch, and existing Python libraries
 - **REPL** — interactive mode with `hgl repl`
 - **LSP server** — `hgl lsp` for editor hover docs and completion
 - **`hgl check`** — type-check without running
@@ -64,7 +66,7 @@ Han is a statically-typed, compiled programming language where every keyword is 
 - **String methods** — `.분리`, `.포함`, `.바꾸기`, `.대문자`, `.소문자`, etc.
 - **Module imports** — `포함 "파일.hgl"`
 - **Generics syntax** — `함수 최대값<T>(a: T, b: T) -> T`
-- **Built-in math** — `제곱근`, `절댓값`, `거듭제곱`, `정수변환`, `실수변환`, `길이`
+- **Built-in math** — `제곱근`, `절댓값`, `거듭제곱`, `사인`, `코사인`, `탄젠트`, `로그`, `로그10`, `지수`, `올림`, `내림`, `반올림`, `최대`, `최소`, `난수`, `파이`, `자연상수`, `정수변환`, `실수변환`, `길이`
 - **Linear algebra** — `행렬곱`, `전치`, `스칼라곱`, `행렬합`, `행렬차`, `내적`, `외적`, `단위행렬`, `텐서곱`
 - **HashMap** — `사전("키", 값)` with `.키목록()`, `.값목록()`, `.포함()`, `.삭제()`
 - **JSON** — `제이슨_파싱()`, `제이슨_생성()` via serde_json
@@ -303,6 +305,7 @@ hgl lsp                     Start LSP server (hover + completion)
 - While loops in both SOV and SVO order — `n < 5 동안 { }` and `동안 n < 5 { }`
 - `멈춰` (break), `계속` (continue)
 - `그리고` / `또는` logical operators — Korean aliases for `&&` / `||`
+- `|>` pipe operator — `a |> f` becomes `f(a)`, and `a |> f(b)` becomes `f(a, b)`
 - `맞춤` pattern matching — integer, string, bool, wildcard `_`, binding
 - Range operator — `0..10` creates `[0, 1, 2, ..., 9]`
 
@@ -363,6 +366,11 @@ hgl lsp                     Start LSP server (hover + completion)
 - `실행(명령어)` — shell command, `환경변수()`, `명령인자()`, `잠자기()`
 - `타입(값)` — runtime type introspection
 
+**Python interop**
+- `파이썬(코드)` executes Python code and returns captured stdout as a string
+- `파이썬_값(표현식)` evaluates a Python expression and converts the value back into Han automatically
+- Use it to reach NumPy, PyTorch, or any installed Python package without leaving Han
+
 **File I/O**
 - `파일읽기("path")` — reads whole file to string
 - `파일쓰기("path", content)` — writes string to file
@@ -370,7 +378,9 @@ hgl lsp                     Start LSP server (hover + completion)
 - `파일존재("path")` — returns bool
 
 **Math builtins**
-- `제곱근(x)`, `절댓값(x)`, `거듭제곱(밑, 지수)`
+- `제곱근(x)`, `절댓값(x)`, `거듭제곱(밑, 지수)`, `사인(x)`, `코사인(x)`, `탄젠트(x)`
+- `로그(x)`, `로그10(x)`, `지수(x)`, `올림(x)`, `내림(x)`, `반올림(x)`
+- `최대(a, b)`, `최소(a, b)`, `난수()`, `난수(a, b)`, `파이()`, `자연상수()`
 - `정수변환(x)`, `실수변환(x)`, `길이(s)`
 - `행렬곱(A, B)`, `전치(A)`, `스칼라곱(A, s)`, `행렬합(A, B)`, `행렬차(A, B)` — matrix ops
 - `내적(a, b)`, `외적(a, b)`, `단위행렬(n)`, `텐서곱(A, B)` — vector/tensor ops

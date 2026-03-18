@@ -56,6 +56,7 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 == !=  <  >  <=  >=     → comparison
 && || !                 → logical
 그리고 또는              → Korean logical aliases
+|>                      → pipe operator
 =  +=  -=  *=  /=       → assignment
 ->                      → return type arrow
 =>                      → match arm arrow
@@ -73,6 +74,21 @@ This page is optimized for LLM consumption. It contains every keyword, type, bui
 제곱근(x)                → sqrt(x) → 실수
 절댓값(x)                → abs(x) → 숫자
 거듭제곱(밑, 지수)        → pow(base, exp) → 실수
+사인(x)                  → sin(x) → 실수
+코사인(x)                → cos(x) → 실수
+탄젠트(x)                → tan(x) → 실수
+로그(x)                  → ln(x) → 실수
+로그10(x)                → log10(x) → 실수
+지수(x)                  → e^x → 실수
+올림(x)                  → ceil(x) → 실수
+내림(x)                  → floor(x) → 실수
+반올림(x)                → round(x) → 실수
+최대(a, b)               → max(a, b) → 실수
+최소(a, b)               → min(a, b) → 실수
+난수()                   → random float 0..1 → 실수
+난수(a, b)               → random int a..b → 정수
+파이()                   → pi constant → 실수
+자연상수()               → Euler's number → 실수
 정수변환(x)              → int(x) → 정수
 실수변환(x)              → float(x) → 실수
 길이(s)                  → len(s) → 정수
@@ -107,6 +123,8 @@ HTTP_보내기(url, body)    → POST request → 문자열
 명령인자()               → CLI args → [문자열]
 잠자기(밀리초)           → sleep
 타입(값)                 → type name → 문자열
+파이썬(코드)             → execute Python, return stdout → 문자열
+파이썬_값(표현식)        → evaluate Python expression → 값
 ```
 
 ## MAP METHODS
