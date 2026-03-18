@@ -1,6 +1,6 @@
 use crate::ast::{BinaryOpKind, Expr, Pattern, Program, Stmt, StmtKind, Type, UnaryOpKind};
 use std::cell::RefCell;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::io::{self, BufRead};
 use std::rc::Rc;
 
@@ -118,6 +118,7 @@ impl RuntimeError {
 
 pub struct Environment {
     store: HashMap<String, Value>,
+    consts: HashSet<String>,
     outer: Option<Box<Environment>>,
 }
 
@@ -125,6 +126,7 @@ impl Environment {
     pub fn new() -> Self {
         Self {
             store: HashMap::new(),
+            consts: HashSet::new(),
             outer: None,
         }
     }
@@ -133,7 +135,23 @@ impl Environment {
     pub fn new_enclosed(outer: Environment) -> Self {
         Self {
             store: HashMap::new(),
+            consts: HashSet::new(),
             outer: Some(Box::new(outer)),
+        }
+    }
+
+    pub fn set_const(&mut self, name: String, val: Value) {
+        self.consts.insert(name.clone());
+        self.store.insert(name, val);
+    }
+
+    pub fn is_const(&self, name: &str) -> bool {
+        if self.consts.contains(name) {
+            true
+        } else if let Some(outer) = &self.outer {
+            outer.is_const(name)
+        } else {
+            false
         }
     }
 
@@ -212,6 +230,12 @@ pub fn eval_expr(expr: &Expr, env: &mut Environment, line: usize) -> Result<Valu
             .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 변수: {}", name), line)),
 
         Expr::Assign { name, value } => {
+            if env.is_const(name) {
+                return Err(RuntimeError::new(
+                    format!("상수 '{}'는 재할당할 수 없습니다", name),
+                    line,
+                ));
+            }
             let val = eval_expr(value, env, line)?;
             if !env.update(name, val.clone()) {
                 env.set(name.clone(), val.clone());
@@ -1744,9 +1768,18 @@ where
 pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, RuntimeError> {
     let line = stmt.span.line;
     match &stmt.kind {
-        StmtKind::VarDecl { name, value, .. } => {
+        StmtKind::VarDecl {
+            name,
+            value,
+            mutable,
+            ..
+        } => {
             let val = eval_expr(value, env, line)?;
-            env.set(name.clone(), val);
+            if *mutable {
+                env.set(name.clone(), val);
+            } else {
+                env.set_const(name.clone(), val);
+            }
             Ok(None)
         }
 

@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub const IO_BUILTINS: &[&str] = &[
     "출력",
     "출력오류",

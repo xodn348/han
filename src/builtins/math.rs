@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub const MATH_BUILTINS: &[&str] = &[
     "제곱근",
     "절댓값",

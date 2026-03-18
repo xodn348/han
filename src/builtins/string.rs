@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub const STRING_METHODS: &[&str] = &[
     "길이",
     "분리",

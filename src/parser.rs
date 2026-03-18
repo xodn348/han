@@ -889,6 +889,7 @@ impl Parser {
                     }
                     let member = match self.advance().clone() {
                         Token::Identifier(n) => n,
+                        Token::포함 => "포함".to_string(),
                         tok => {
                             return Err(ParseError::new(
                                 format!("필드/메서드 이름 예상, '{:?}' 발견", tok),
@@ -952,7 +953,7 @@ impl Parser {
             Token::실수타입 => Ok(Type::실수),
             Token::문자열타입 => Ok(Type::문자열),
             Token::불타입 => Ok(Type::불),
-            Token::없음타입 => Ok(Type::없음),
+            Token::없음타입 | Token::없음 => Ok(Type::없음),
             Token::함수 => Ok(Type::함수타입),
             Token::Identifier(name) => Ok(Type::구조체(name)),
             tok => Err(ParseError::new(

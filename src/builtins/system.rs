@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub const SYSTEM_BUILTINS: &[&str] = &[
     "실행",
     "환경변수",
