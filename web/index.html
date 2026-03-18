@@ -171,9 +171,6 @@
       <button class="example-btn" onclick="loadExample('binary')">이진탐색</button>
       <button class="example-btn" onclick="loadExample('euclid')">유클리드</button>
       <button class="example-btn" onclick="loadExample('quantum')">퀀텀</button>
-      <button class="example-btn" onclick="loadExample('sov')">🆕 SOV 어순</button>
-      <button class="example-btn" onclick="loadExample('interpolation')">🆕 문자열 보간</button>
-      <button class="example-btn" onclick="loadExample('koreanop')">🆕 그리고/또는</button>
     </div>
   </div>
 
@@ -253,7 +250,7 @@
     출력(후렴[i])
 }`,
 
-    euclid: `// 유클리드 알고리즘 — SOV 어순
+    euclid: `// Euclidean algorithm
 함수 최대공약수(가: 정수, 나: 정수) -> 정수 {
     나 == 0 만약 {
         반환 가
@@ -272,7 +269,7 @@
 }
 출력(형식("최대공약수 = {0}", 가))`,
 
-    binary: `// 이진탐색 — SOV 어순
+    binary: `// Binary search
 함수 이진탐색(배열: [정수], 목표: 정수) -> 정수 {
     변수 왼쪽 = 0
     변수 오른쪽 = 배열.길이() - 1
@@ -293,7 +290,7 @@
 출력(형식("23 탐색: 위치 {0}", 이진탐색(배열, 23)))
 출력(형식("7  탐색: 위치 {0}", 이진탐색(배열, 7)))`,
 
-    koreanage: `// 한국 나이 — SOV 어순
+    koreanage: `// Korean age calculator
 함수 한국나이(출생년도: 정수) -> 정수 {
     반환 2026 - 출생년도 + 1
 }
@@ -311,7 +308,7 @@
 출력(형식("만 나이 (생일 전): {0}세", 만나이(출생년도, 거짓)))
 출력(형식("만 나이 (생일 후): {0}세", 만나이(출생년도, 참)))`,
 
-    bmi: `// BMI 계산기 — SOV 어순
+    bmi: `// BMI calculator
 함수 bmi계산(몸무게: 실수, 키: 실수) -> 실수 {
     변수 키m = 키 / 100.0
     반환 몸무게 / (키m * 키m)
@@ -334,62 +331,8 @@
 출력(형식("BMI: {0}", 지수))
 출력(형식("판정: {0}", 판정(지수)))`,
 
-    sov: `// SOV 어순 — 한국어 자연어 순서로 코딩
-// "조건 만약" = 한국어 "~면"
-// "조건 동안" = 한국어 "~하는 동안"
-
-함수 피보나치(n: 정수) -> 정수 {
-    n <= 1 만약 { 반환 n }
-    반환 피보나치(n - 1) + 피보나치(n - 2)
-}
-
-변수 i = 0
-i < 10 동안 {
-    출력(형식("F({0}) = {1}", i, 피보나치(i)))
-    i += 1
-}
-
-// 기존 SVO 문법도 동작합니다:
-// 만약 n <= 1 { 반환 n }
-// 동안 i < 10 { ... }`,
-
-    interpolation: `// 문자열 보간 (V2 신기능)
-// "\${변수}" 로 문자열 안에 값 삽입
-
-변수 이름 = "홍길동"
-변수 나이 = 25
-변수 직업 = "개발자"
-
-출력("이름: \${이름}")
-출력("나이: \${나이}세")
-출력("\${이름}님은 \${직업}입니다")
-
-// 기존 형식() 함수도 동작합니다:
-출력(형식("{0}님, 환영합니다!", 이름))`,
-
-    koreanop: `// 한글 논리 연산자 (V2 신기능)
-// 그리고 = && (AND)
-// 또는   = || (OR)
-
-변수 나이 = 20
-변수 학생 = 참
-
-나이 >= 19 그리고 학생 만약 {
-    출력("성인 학생입니다")
-}
-
-나이 < 13 또는 나이 >= 65 만약 {
-    출력("할인 대상")
-} 아니면 {
-    출력("일반 요금")
-}
-
-// 기존 &&, || 도 그대로 동작합니다
-나이 >= 19 && 학생 만약 {
-    출력("(기존 문법도 OK)")
-}`,
-
-    quantum: `함수 반올림(x: 실수) -> 실수 {
+    quantum: `// Quantum gate: HZH = X
+함수 반올림(x: 실수) -> 실수 {
     반환 실수변환(정수변환(x * 10000.0 + 0.5)) / 10000.0
 }
 
@@ -415,17 +358,8 @@ i < 10 동안 {
 출력(형식("            [{0}, {1}]", X[1][0], X[1][1]))`
   };
 
-  const initialCode = `// Han v0.2.0 — 한국어 프로그래밍 언어
-// SOV 어순: 조건 만약 { }, 조건 동안 { }
-
-변수 인사 = "안녕하세요"
-출력("\${인사}, Han 세계에 오신 것을 환영합니다!")
-
-변수 i = 1
-i <= 5 동안 {
-    출력(형식("  {0}번째 별: ★", i))
-    i += 1
-}`;
+  const initialCode = `출력("Golden — KPOP Demon Hunters")
+출력("밝게 빛나는 우린")`;
 
   view = new EditorView({
     state: EditorState.create({
