@@ -1254,6 +1254,115 @@ fn eval_builtin_math(
                 _ => Err(RuntimeError::new("길이: 문자열 타입 필요", line)),
             }
         }
+        "행렬곱" => {
+            if args.len() != 2 {
+                return Err(RuntimeError::new("행렬곱: 인자 2개 필요 (A, B)", line));
+            }
+            let a = eval_expr(&args[0], env, line)?;
+            let b = eval_expr(&args[1], env, line)?;
+            match (a, b) {
+                (Value::Array(a_rows), Value::Array(b_rows)) => {
+                    let a_rows = a_rows.borrow();
+                    let b_rows = b_rows.borrow();
+                    let m = a_rows.len();
+                    if m == 0 {
+                        return Ok(Some(Value::Array(Rc::new(RefCell::new(vec![])))));
+                    }
+                    let a_cols = match &a_rows[0] {
+                        Value::Array(r) => r.borrow().len(),
+                        _ => return Err(RuntimeError::new("행렬곱: 2차원 배열 필요", line)),
+                    };
+                    let b_cols = match &b_rows[0] {
+                        Value::Array(r) => r.borrow().len(),
+                        _ => return Err(RuntimeError::new("행렬곱: 2차원 배열 필요", line)),
+                    };
+                    let mut result = Vec::with_capacity(m);
+                    for i in 0..m {
+                        let a_row = match &a_rows[i] {
+                            Value::Array(r) => r.borrow().clone(),
+                            _ => return Err(RuntimeError::new("행렬곱: 2차원 배열 필요", line)),
+                        };
+                        let mut row = Vec::with_capacity(b_cols);
+                        for j in 0..b_cols {
+                            let mut sum = 0.0_f64;
+                            for k in 0..a_cols {
+                                let av = match &a_row[k] {
+                                    Value::Int(n) => *n as f64,
+                                    Value::Float(f) => *f,
+                                    _ => {
+                                        return Err(RuntimeError::new(
+                                            "행렬곱: 숫자 타입 필요",
+                                            line,
+                                        ))
+                                    }
+                                };
+                                let bv = match &b_rows[k] {
+                                    Value::Array(br) => {
+                                        let br = br.borrow();
+                                        match &br[j] {
+                                            Value::Int(n) => *n as f64,
+                                            Value::Float(f) => *f,
+                                            _ => {
+                                                return Err(RuntimeError::new(
+                                                    "행렬곱: 숫자 타입 필요",
+                                                    line,
+                                                ))
+                                            }
+                                        }
+                                    }
+                                    _ => {
+                                        return Err(RuntimeError::new(
+                                            "행렬곱: 2차원 배열 필요",
+                                            line,
+                                        ))
+                                    }
+                                };
+                                sum += av * bv;
+                            }
+                            row.push(Value::Float(sum));
+                        }
+                        result.push(Value::Array(Rc::new(RefCell::new(row))));
+                    }
+                    Ok(Some(Value::Array(Rc::new(RefCell::new(result)))))
+                }
+                _ => Err(RuntimeError::new("행렬곱: 2차원 배열 필요", line)),
+            }
+        }
+        "전치" => {
+            if args.len() != 1 {
+                return Err(RuntimeError::new("전치: 인자 1개 필요", line));
+            }
+            let v = eval_expr(&args[0], env, line)?;
+            match v {
+                Value::Array(rows) => {
+                    let rows = rows.borrow();
+                    if rows.is_empty() {
+                        return Ok(Some(Value::Array(Rc::new(RefCell::new(vec![])))));
+                    }
+                    let m = rows.len();
+                    let n = match &rows[0] {
+                        Value::Array(r) => r.borrow().len(),
+                        _ => return Err(RuntimeError::new("전치: 2차원 배열 필요", line)),
+                    };
+                    let mut result = Vec::with_capacity(n);
+                    for j in 0..n {
+                        let mut col = Vec::with_capacity(m);
+                        for i in 0..m {
+                            match &rows[i] {
+                                Value::Array(r) => {
+                                    let r = r.borrow();
+                                    col.push(r[j].clone());
+                                }
+                                _ => return Err(RuntimeError::new("전치: 2차원 배열 필요", line)),
+                            }
+                        }
+                        result.push(Value::Array(Rc::new(RefCell::new(col))));
+                    }
+                    Ok(Some(Value::Array(Rc::new(RefCell::new(result)))))
+                }
+                _ => Err(RuntimeError::new("전치: 배열 타입 필요", line)),
+            }
+        }
         _ => Ok(None),
     }
 }
