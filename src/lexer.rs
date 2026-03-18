@@ -123,6 +123,8 @@ pub fn get_keyword_map() -> HashMap<String, Token> {
     map.insert("구현".to_string(), Token::구현);
     map.insert("열거".to_string(), Token::열거);
     map.insert("안에서".to_string(), Token::안에서);
+    map.insert("그리고".to_string(), Token::AmpAmp);
+    map.insert("또는".to_string(), Token::PipePipe);
     // 타입 키워드
     map.insert("정수".to_string(), Token::정수타입);
     map.insert("실수".to_string(), Token::실수타입);
