@@ -283,6 +283,24 @@ hgl lsp                     Start LSP server (hover + completion)
 
 ---
 
+## Vercel / Agent Skills
+
+Han now ships an installable agent skill at `skills/han-language`. This follows the same `SKILL.md`-based format used by Vercel's official `agent-skills` repository.
+
+Install the Han skill with the skills CLI:
+
+```bash
+npx skills add https://github.com/xodn348/han --skill han-language
+```
+
+If you are wiring skills into a Vercel AI SDK agent, keep your skills in a local `./skills` directory, load them with `experimental_createSkillTool` from `bash-tool`, then pass the returned files and instructions into `createBashTool` before exposing both to your agent.
+
+References:
+- Vercel changelog: https://vercel.com/changelog/use-skills-in-your-ai-sdk-agents-via-bash-tool
+- Vercel agent-skills repo: https://github.com/vercel-labs/agent-skills
+
+---
+
 ## What Han Can Do Right Now
 
 ### ✅ Fully Working
