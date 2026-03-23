@@ -22,6 +22,7 @@ Output: `세계님 안녕하세요`
 - **Korean logical operators** — `그리고`, `또는`
 - **Dual execution** — interpreter (`hgl interpret`) and compiler (`hgl build`)
 - **Tooling** — `hgl check`, `hgl init`, VS Code extension, and LSP support
+- **Learning path** — `examples/교육_*.hgl` includes 10 SOV-first educational programs
 - **Arrays, structs, enums, tuples, closures, pattern matching**
 - **Error handling** — `시도` / `처리` with Elm-style source-context errors
 - **File I/O, format strings, module imports**
@@ -32,4 +33,3 @@ Output: `세계님 안녕하세요`
 Source (.hgl) → Lexer → Parser → AST → Interpreter (direct execution)
                                      → CodeGen → LLVM IR → clang → Binary
 ```
-

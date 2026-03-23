@@ -25,3 +25,10 @@
 ```
 
 Named mode substitutes `{변수명}` with the variable's value from the current scope. Interpolated strings are automatically desugared to `형식()`.
+
+```hgl
+출력("합: ${1 + 2}")
+// desugars to: 출력(형식("합: {0}", 1 + 2))
+```
+
+Use interpolation for simple expressions. `형식()` remains the most explicit option for complex templates.

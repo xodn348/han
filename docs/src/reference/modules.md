@@ -8,6 +8,17 @@
 
 This executes the file and imports all its definitions (functions, variables, structs) into the current scope.
 
+## Duplicate Includes
+
+Han tracks imported files by canonical path and skips duplicate includes.
+
+```hgl
+포함 "utils.hgl"
+포함 "./utils.hgl"   // same file -> skipped
+```
+
+This keeps include behavior idempotent for repeated module wiring.
+
 ## Example
 
 `수학도구.hgl`:
