@@ -1,0 +1,4 @@
+interface:
+  display_name: "Han Language"
+  short_description: "Write and reason about Han (.hgl)"
+  default_prompt: "Use $han-language to write, explain, or debug Han (.hgl) code with the current Hangul syntax."
