@@ -53,7 +53,7 @@ Han is a statically-typed, compiled programming language where every keyword is 
 - **REPL** — interactive mode with `hgl repl`
 - **LSP server** — `hgl lsp` for editor hover docs and completion
 - **`hgl check`** — type-check without running
-- **`hgl init`** — project scaffolding
+- **`hgl init`** — project scaffolding (`main.hgl` + `.gitignore`)
 - **Static typing** — 5 primitive types: `정수` (int), `실수` (float), `문자열` (string), `불` (bool), `없음` (void)
 - **Arrays** — `[1, 2, 3]`, indexing, negative indexing, `.추가/.삭제/.정렬/.역순` etc.
 - **Structs** — `구조 사람 { 이름: 문자열 }` with field access and impl blocks
@@ -62,9 +62,9 @@ Han is a statically-typed, compiled programming language where every keyword is 
 - **Error handling** — `시도 { } 처리(오류) { }` try/catch
 - **File I/O** — `파일읽기`, `파일쓰기`, `파일추가`, `파일존재`
 - **Format strings** — `형식("이름: {0}", 이름)` positional or `형식("이름: {이름}")` named
-- **String interpolation** — `"${expr}"` auto-desugars to `형식()`
+- **String interpolation** — `"${expr}"` (including arithmetic/call expressions) auto-desugars to `형식()`
 - **String methods** — `.분리`, `.포함`, `.바꾸기`, `.대문자`, `.소문자`, etc.
-- **Module imports** — `포함 "파일.hgl"`
+- **Module imports** — `포함 "파일.hgl"` (duplicate includes are skipped by canonical path)
 - **Generics syntax** — `함수 최대값<T>(a: T, b: T) -> T`
 - **Built-in math** — `제곱근`, `절댓값`, `거듭제곱`, `사인`, `코사인`, `탄젠트`, `로그`, `로그10`, `지수`, `올림`, `내림`, `반올림`, `최대`, `최소`, `난수`, `파이`, `자연상수`, `정수변환`, `실수변환`, `길이`
 - **Linear algebra** — `행렬곱`, `전치`, `스칼라곱`, `행렬합`, `행렬차`, `내적`, `외적`, `단위행렬`, `텐서곱`
@@ -318,7 +318,7 @@ hgl lsp                     Start LSP server (hover + completion)
 
 **Strings**
 - Concatenation with `+`
-- Interpolation — `"${이름}님 안녕하세요"` desugars to `형식()`
+- Interpolation — `"${이름}님 안녕하세요"`, `"${1 + 2}"` desugars to `형식()`
 - Methods: `.분리(sep)`, `.포함(s)`, `.바꾸기(from, to)`, `.앞뒤공백제거()`, `.대문자()`, `.소문자()`, `.시작(s)`, `.끝(s)`, `.길이()`
 - Character indexing — `문자열[0]`, negative: `문자열[-1]`
 - Method chaining — `"hello world".대문자().분리(" ")`

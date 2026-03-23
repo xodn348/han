@@ -362,6 +362,16 @@ fn main() {
                 eprintln!("파일 생성 실패: {}", e);
                 process::exit(1);
             });
+            let gitignore_path = if dir == "." {
+                ".gitignore".to_string()
+            } else {
+                format!("{}/.gitignore", dir)
+            };
+            let gitignore_content = "# Han build artifacts\n*.ll\n*.bc\n*.o\n*.out\n";
+            fs::write(&gitignore_path, gitignore_content).unwrap_or_else(|e| {
+                eprintln!("파일 생성 실패: {}", e);
+                process::exit(1);
+            });
             println!("✓ 프로젝트 초기화 완료: {}", main_path);
         }
 

@@ -25,6 +25,7 @@ pub struct CodeGen {
     lambda_bindings: HashMap<String, LambdaBinding>,
     struct_defs: HashMap<String, Vec<String>>,
     enum_defs: HashMap<String, Vec<String>>,
+    imported_paths: HashSet<String>,
     current_error_flag: Option<String>,
     current_error_message: Option<String>,
 }
@@ -43,6 +44,7 @@ impl CodeGen {
             lambda_bindings: HashMap::new(),
             struct_defs: HashMap::new(),
             enum_defs: HashMap::new(),
+            imported_paths: HashSet::new(),
             current_error_flag: None,
             current_error_message: None,
         }
@@ -1544,7 +1546,16 @@ impl CodeGen {
                 catch_block,
             } => self.gen_try_catch_stmt(try_block, error_name, catch_block),
             StmtKind::Import(path) => {
-                if let Ok(source) = std::fs::read_to_string(path) {
+                let resolved_path = std::fs::canonicalize(path)
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| path.clone());
+
+                if self.imported_paths.contains(&resolved_path) {
+                    return;
+                }
+                self.imported_paths.insert(resolved_path.clone());
+
+                if let Ok(source) = std::fs::read_to_string(&resolved_path) {
                     let tokens = crate::lexer::tokenize(&source);
                     if let Ok(program) = crate::parser::parse(tokens) {
                         for stmt in &program.stmts {
@@ -1571,6 +1582,7 @@ impl CodeGen {
                     } else {
                         end_lbl.clone()
                     };
+                    let mut needs_next_label = false;
 
                     match &arm.pattern {
                         crate::ast::Pattern::Wildcard => {
@@ -1579,16 +1591,9 @@ impl CodeGen {
                         crate::ast::Pattern::Identifier(variant_name) => {
                             let tag = self.resolve_enum_tag(variant_name);
                             if let Some(tag_val) = tag {
-                                let tag_tmp = self.fresh_temp();
-                                self.emit(&format!(
-                                    "  {} = extractvalue {{ i64, i64 }} {}, 0",
-                                    tag_tmp, val
-                                ));
+                                needs_next_label = true;
                                 let cmp = self.fresh_temp();
-                                self.emit(&format!(
-                                    "  {} = icmp eq i64 {}, {}",
-                                    cmp, tag_tmp, tag_val
-                                ));
+                                self.emit(&format!("  {} = icmp eq i64 {}, {}", cmp, val, tag_val));
                                 self.emit(&format!(
                                     "  br i1 {}, label %{}, label %{}",
                                     cmp, arm_lbl, next_lbl
@@ -1598,6 +1603,7 @@ impl CodeGen {
                             }
                         }
                         crate::ast::Pattern::IntLiteral(n) => {
+                            needs_next_label = true;
                             let cmp = self.fresh_temp();
                             self.emit(&format!("  {} = icmp eq i64 {}, {}", cmp, val, n));
                             self.emit(&format!(
@@ -1606,6 +1612,7 @@ impl CodeGen {
                             ));
                         }
                         crate::ast::Pattern::BoolLiteral(b) => {
+                            needs_next_label = true;
                             let bv = if *b { 1 } else { 0 };
                             let cmp = self.fresh_temp();
                             self.emit(&format!("  {} = icmp eq i64 {}, {}", cmp, val, bv));
@@ -1625,12 +1632,7 @@ impl CodeGen {
                     }
                     self.emit(&format!("  br label %{}", end_lbl));
 
-                    if i + 1 < arms.len()
-                        && !matches!(
-                            arm.pattern,
-                            crate::ast::Pattern::Wildcard | crate::ast::Pattern::Identifier(_)
-                        )
-                    {
+                    if i + 1 < arms.len() && needs_next_label {
                         self.emit(&format!("{}:", next_lbl));
                     }
                 }
@@ -1987,8 +1989,6 @@ mod tests {
             }),
         ]);
         let ir = codegen(&program);
-        assert!(ir.contains("{ i64, i64 }"));
-        assert!(ir.contains("extractvalue { i64, i64 }"));
         assert!(ir.contains("icmp eq i64"));
         assert!(ir.contains("match_arm"));
     }

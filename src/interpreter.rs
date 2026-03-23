@@ -119,6 +119,7 @@ impl RuntimeError {
 pub struct Environment {
     store: HashMap<String, Value>,
     consts: HashSet<String>,
+    imported_paths: HashSet<String>,
     outer: Option<Box<Environment>>,
 }
 
@@ -127,6 +128,7 @@ impl Environment {
         Self {
             store: HashMap::new(),
             consts: HashSet::new(),
+            imported_paths: HashSet::new(),
             outer: None,
         }
     }
@@ -136,7 +138,34 @@ impl Environment {
         Self {
             store: HashMap::new(),
             consts: HashSet::new(),
+            imported_paths: HashSet::new(),
             outer: Some(Box::new(outer)),
+        }
+    }
+
+    pub fn has_imported_path(&self, path: &str) -> bool {
+        if self.imported_paths.contains(path) {
+            true
+        } else if let Some(outer) = &self.outer {
+            outer.has_imported_path(path)
+        } else {
+            false
+        }
+    }
+
+    pub fn mark_imported_path(&mut self, path: &str) {
+        if let Some(outer) = &mut self.outer {
+            outer.mark_imported_path(path);
+        } else {
+            self.imported_paths.insert(path.to_string());
+        }
+    }
+
+    pub fn unmark_imported_path(&mut self, path: &str) {
+        if let Some(outer) = &mut self.outer {
+            outer.unmark_imported_path(path);
+        } else {
+            self.imported_paths.remove(path);
         }
     }
 
@@ -2109,13 +2138,32 @@ pub fn eval_stmt(stmt: &Stmt, env: &mut Environment) -> Result<Option<Signal>, R
         },
 
         StmtKind::Import(path) => {
-            let source = std::fs::read_to_string(path)
-                .map_err(|e| RuntimeError::new(format!("포함 실패 '{}': {}", path, e), line))?;
-            let tokens = crate::lexer::tokenize(&source);
-            let program = crate::parser::parse(tokens).map_err(|e| {
-                RuntimeError::new(format!("'{}' 파싱 오류: {}", path, e.message), line)
-            })?;
-            eval_block(&program.stmts, env)?;
+            let resolved_path = std::fs::canonicalize(path)
+                .map(|p| p.to_string_lossy().to_string())
+                .unwrap_or_else(|_| path.clone());
+
+            if env.has_imported_path(&resolved_path) {
+                return Ok(None);
+            }
+
+            env.mark_imported_path(&resolved_path);
+
+            let import_result = (|| -> Result<(), RuntimeError> {
+                let source = std::fs::read_to_string(&resolved_path)
+                    .map_err(|e| RuntimeError::new(format!("포함 실패 '{}': {}", path, e), line))?;
+                let tokens = crate::lexer::tokenize(&source);
+                let program = crate::parser::parse(tokens).map_err(|e| {
+                    RuntimeError::new(format!("'{}' 파싱 오류: {}", path, e.message), line)
+                })?;
+                eval_block(&program.stmts, env)?;
+                Ok(())
+            })();
+
+            if let Err(err) = import_result {
+                env.unmark_imported_path(&resolved_path);
+                return Err(err);
+            }
+
             Ok(None)
         }
 
@@ -2408,5 +2456,39 @@ mod tests {
         }))]);
         let result = interpret(program);
         assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_import_skips_duplicate_includes() {
+        use std::fs;
+        use std::time::{SystemTime, UNIX_EPOCH};
+
+        let suffix = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let temp_path = std::env::temp_dir().join(format!("han_import_once_{}.hgl", suffix));
+        let import_source = "카운터 = 카운터 + 1\n";
+        fs::write(&temp_path, import_source).unwrap();
+
+        let import_path = temp_path
+            .to_string_lossy()
+            .replace('\\', "\\\\")
+            .replace('"', "\\\"");
+
+        let main_source = format!(
+            "변수 카운터 = 0\n포함 \"{}\"\n포함 \"{}\"\n",
+            import_path, import_path
+        );
+
+        let tokens = crate::lexer::tokenize(&main_source);
+        let program = crate::parser::parse(tokens).unwrap();
+        let mut env = Environment::new();
+        let result = eval_block(&program.stmts, &mut env);
+
+        let _ = fs::remove_file(&temp_path);
+
+        assert!(result.is_ok());
+        assert!(matches!(env.get("카운터"), Some(Value::Int(1))));
     }
 }

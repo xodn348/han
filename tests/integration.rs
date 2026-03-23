@@ -132,6 +132,100 @@ fn test_const_immutability() {
 }
 
 #[test]
+fn test_korean_logical_operators() {
+    let out = interpret(
+        "만약 참 그리고 거짓 이면 {\n    출력(1)\n} 아니면 {\n    출력(0)\n}\n만약 참 또는 거짓 이면 {\n    출력(1)\n}\n",
+    );
+    assert_eq!(out.trim(), "0\n1");
+}
+
+#[test]
+fn test_string_interpolation_with_expression() {
+    let out = interpret("출력(\"결과: ${1 + 2}\")\n");
+    assert_eq!(out.trim(), "결과: 3");
+}
+
+#[test]
+fn test_check_subcommand_success_and_failure() {
+    let suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("time went backwards")
+        .as_nanos();
+    let valid_path = std::env::temp_dir().join(format!("han_check_valid_{}.hgl", suffix));
+    let invalid_path = std::env::temp_dir().join(format!("han_check_invalid_{}.hgl", suffix));
+
+    fs::write(&valid_path, "변수 x: 정수 = 1\n출력(x)\n").expect("failed to write valid file");
+    fs::write(&invalid_path, "변수 x: 정수 = \"안녕\"\n").expect("failed to write invalid file");
+
+    let ok_output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            "check",
+            valid_path.to_str().expect("valid path should be utf8"),
+        ])
+        .output()
+        .expect("failed to run hgl check on valid file");
+
+    let fail_output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            "check",
+            invalid_path.to_str().expect("invalid path should be utf8"),
+        ])
+        .output()
+        .expect("failed to run hgl check on invalid file");
+
+    let _ = fs::remove_file(&valid_path);
+    let _ = fs::remove_file(&invalid_path);
+
+    assert!(
+        ok_output.status.success(),
+        "hgl check should pass on valid file: {}",
+        String::from_utf8_lossy(&ok_output.stderr)
+    );
+    assert!(
+        !fail_output.status.success(),
+        "hgl check should fail on type mismatch"
+    );
+}
+
+#[test]
+fn test_init_subcommand_creates_scaffold_files() {
+    let suffix = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("time went backwards")
+        .as_nanos();
+    let project_dir = std::env::temp_dir().join(format!("han_init_{}", suffix));
+
+    let output = Command::new("cargo")
+        .args([
+            "run",
+            "--quiet",
+            "--",
+            "init",
+            project_dir
+                .to_str()
+                .expect("project path should be valid utf8"),
+        ])
+        .output()
+        .expect("failed to execute hgl init");
+
+    assert!(
+        output.status.success(),
+        "hgl init failed: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    assert!(project_dir.join("main.hgl").exists());
+    assert!(project_dir.join(".gitignore").exists());
+
+    let _ = fs::remove_dir_all(&project_dir);
+}
+
+#[test]
 fn test_contains_method() {
     let out = interpret("변수 arr = [1, 2, 3]\n만약 arr.포함(2) 이면 {\n    출력(\"있다\")\n}\n");
     assert_eq!(out.trim(), "있다");

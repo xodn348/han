@@ -697,20 +697,15 @@ impl Parser {
             return Err(ParseError::new("문자열 보간 식이 비어 있습니다", line));
         }
 
-        let tokens = crate::lexer::tokenize(trimmed);
-        let meaningful_tokens: Vec<Token> = tokens
-            .into_iter()
-            .map(|token| token.token)
-            .filter(|token| !matches!(token, Token::Newline | Token::Eof))
-            .collect();
-
-        match meaningful_tokens.as_slice() {
-            [Token::Identifier(name)] => Ok(Expr::Identifier(name.clone())),
-            _ => Err(ParseError::new(
-                "문자열 보간은 현재 단순 식별자만 지원합니다",
+        let mut parser = Parser::new(crate::lexer::tokenize(trimmed));
+        let expr = parser.parse_expr()?;
+        if !matches!(parser.peek(), Token::Eof) {
+            return Err(ParseError::new(
+                "문자열 보간 식 파싱 실패: 예상치 못한 토큰",
                 line,
-            )),
+            ));
         }
+        Ok(expr)
     }
 
     fn parse_primary(&mut self) -> Result<Expr, ParseError> {
@@ -1528,6 +1523,29 @@ mod tests {
                 );
                 assert!(matches!(&args[1], Expr::Identifier(name) if name == "a"));
                 assert!(matches!(&args[2], Expr::Identifier(name) if name == "b"));
+            }
+            _ => panic!("Expected ExprStmt(Call)"),
+        }
+    }
+
+    #[test]
+    fn test_parse_interpolation_with_binary_expression() {
+        let src = "\"결과: ${1 + 2}\"";
+        let prog = parse_src(src);
+        match &prog.stmts[0].kind {
+            StmtKind::ExprStmt(Expr::Call { name, args }) => {
+                assert_eq!(name, "형식");
+                assert_eq!(args.len(), 2);
+                assert!(
+                    matches!(&args[0], Expr::StringLiteral(template) if template == "결과: {0}")
+                );
+                assert!(matches!(
+                    &args[1],
+                    Expr::BinaryOp {
+                        op: BinaryOpKind::Add,
+                        ..
+                    }
+                ));
             }
             _ => panic!("Expected ExprStmt(Call)"),
         }
