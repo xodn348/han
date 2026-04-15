@@ -1,6 +1,6 @@
 # Han (한) Programming Language
 
-> A general-purpose compiled language with Korean keywords — written in Rust
+> A general-purpose compiled language with Korean keywords, types, built-ins, and standard library — written in Rust
 
 <p align="center">
   <a href="https://xodn348.github.io/han/playground/"><img src="https://img.shields.io/badge/▶%20playground-try%20it%20live-brightgreen?style=flat-square" alt="Playground"></a>
@@ -36,7 +36,7 @@ Korean is spoken by ~80 million people, yet essentially zero programming languag
 
 ## About
 
-Han is a statically-typed, compiled programming language where every keyword is written in Korean. It compiles to native binaries through LLVM IR and also ships with a tree-walking interpreter for instant execution. The compiler toolchain is written entirely in Rust.
+Han is a statically-typed, compiled programming language where keywords, type names, 50+ built-in functions, and standard library methods are written in Korean — with all error messages in Korean too. Arithmetic, comparison, and assignment operators follow C/Rust conventions. It compiles to native binaries through LLVM IR and also ships with a tree-walking interpreter for instant execution. The compiler toolchain is written entirely in Rust.
 
 ---
 
@@ -490,7 +490,7 @@ Han offers these learners something unexpected: a way to practice reading and wr
 
 ## Learn Korean Through Coding
 
-Every keyword in Han is a real Korean word. If you're learning Korean, writing Han code is a way to practice reading Hangul in context.
+Every keyword, type name, built-in function, and method in Han is a real Korean word. If you're learning Korean, writing Han code is a way to practice reading Hangul in context.
 
 | Code | Pronunciation | Meaning | What it does |
 |------|--------------|---------|-------------|
