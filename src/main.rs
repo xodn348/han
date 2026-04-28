@@ -197,7 +197,7 @@ fn run_repl() {
     println!("종료: Ctrl+D 또는 '나가기' 입력\n");
 
     let stdin = io::stdin();
-    let mut env = interpreter::Environment::new();
+    let env = interpreter::Environment::new_ref();
 
     loop {
         print!("한> ");
@@ -222,7 +222,7 @@ fn run_repl() {
         }
 
         match try_parse(trimmed) {
-            Ok(program) => match interpreter::eval_block(&program.stmts, &mut env) {
+            Ok(program) => match interpreter::eval_block(&program.stmts, &env) {
                 Ok(_) => {}
                 Err(e) => {
                     if e.line > 0 {
