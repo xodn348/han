@@ -123,6 +123,12 @@ pub struct Environment {
     outer: Option<Box<Environment>>,
 }
 
+impl Default for Environment {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Environment {
     pub fn new() -> Self {
         Self {
@@ -924,7 +930,7 @@ fn eval_builtin_stdlib(
                     .map_err(|e| RuntimeError::new(format!("HTTP 오류: {}", e), line))?
                     .text()
                     .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
-                return Ok(Some(Value::Str(body)));
+                Ok(Some(Value::Str(body)))
             }
             #[cfg(not(feature = "native"))]
             return Err(RuntimeError::new(
@@ -956,7 +962,7 @@ fn eval_builtin_stdlib(
                     .map_err(|e| RuntimeError::new(format!("HTTP POST 오류: {}", e), line))?
                     .text()
                     .map_err(|e| RuntimeError::new(format!("HTTP 응답 읽기 오류: {}", e), line))?;
-                return Ok(Some(Value::Str(resp)));
+                Ok(Some(Value::Str(resp)))
             }
             #[cfg(not(feature = "native"))]
             return Err(RuntimeError::new(

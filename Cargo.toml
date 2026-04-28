@@ -2,6 +2,12 @@
 name = "han"
 version = "0.2.0"
 edition = "2024"
+description = "한글(Han) Korean-syntax programming language: interpreter, LLVM-IR codegen, and LSP"
+license = "MIT"
+repository = "https://github.com/vkehfdl1/han"
+authors = ["Junhyuk Lee <xodn348@tamu.edu>"]
+keywords = ["korean", "language", "compiler", "interpreter", "llvm"]
+categories = ["compilers", "development-tools", "command-line-utilities"]
 
 [[bin]]
 name = "hgl"
