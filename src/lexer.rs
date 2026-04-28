@@ -233,7 +233,7 @@ impl Lexer {
         Ok(s)
     }
 
-    fn read_number(&mut self, first: char) -> Token {
+    fn read_number(&mut self, first: char) -> Option<Token> {
         let mut num = String::new();
         num.push(first);
         let mut is_float = false;
@@ -253,9 +253,9 @@ impl Lexer {
         }
 
         if is_float {
-            Token::FloatLiteral(num.parse().unwrap_or(0.0))
+            num.parse::<f64>().ok().map(Token::FloatLiteral)
         } else {
-            Token::IntLiteral(num.parse().unwrap_or(0))
+            num.parse::<i64>().ok().map(Token::IntLiteral)
         }
     }
 
@@ -303,7 +303,7 @@ impl Lexer {
                 Err(_) => return None,
             },
 
-            '0'..='9' => self.read_number(c),
+            '0'..='9' => self.read_number(c)?,
 
             '+' => {
                 if self.peek() == Some('=') {

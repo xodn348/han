@@ -20,11 +20,9 @@ pub fn run_python(code: &str) -> Result<String, String> {
             code
         );
 
-        match py.run(
-            &std::ffi::CString::new(wrapped).unwrap(),
-            None,
-            Some(&locals),
-        ) {
+        let c_wrapped = std::ffi::CString::new(wrapped)
+            .map_err(|e| format!("파이썬 코드에 NUL 바이트가 포함됨: {}", e))?;
+        match py.run(&c_wrapped, None, Some(&locals)) {
             Ok(_) => match locals.get_item("_result") {
                 Ok(Some(val)) => Ok(val.to_string()),
                 _ => Ok(String::new()),
@@ -37,7 +35,9 @@ pub fn run_python(code: &str) -> Result<String, String> {
 #[cfg(feature = "python")]
 pub fn eval_python(code: &str) -> Result<Value, String> {
     Python::with_gil(|py| {
-        let result = py.eval(&std::ffi::CString::new(code).unwrap(), None, None);
+        let c_code = std::ffi::CString::new(code)
+            .map_err(|e| format!("파이썬 코드에 NUL 바이트가 포함됨: {}", e))?;
+        let result = py.eval(&c_code, None, None);
         match result {
             Ok(val) => {
                 if let Ok(i) = val.extract::<i64>() {
