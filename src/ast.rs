@@ -107,6 +107,7 @@ pub struct MatchArm {
 }
 
 #[derive(Debug, Clone)]
+#[allow(clippy::enum_variant_names)]
 pub enum Pattern {
     IntLiteral(i64),
     FloatLiteral(f64),
