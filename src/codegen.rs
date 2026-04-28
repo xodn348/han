@@ -30,6 +30,12 @@ pub struct CodeGen {
     current_error_message: Option<String>,
 }
 
+impl Default for CodeGen {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl CodeGen {
     pub fn new() -> Self {
         Self {
@@ -1257,7 +1263,7 @@ impl CodeGen {
     }
 
     fn resolve_enum_tag(&self, variant: &str) -> Option<usize> {
-        for (_enum_name, variants) in &self.enum_defs {
+        for variants in self.enum_defs.values() {
             if let Some(pos) = variants.iter().position(|v| v == variant) {
                 return Some(pos);
             }
@@ -1266,10 +1272,10 @@ impl CodeGen {
     }
 
     fn find_field_index(&self, object: &Expr, field: &str) -> usize {
-        if let Some(struct_name) = self.struct_name_for_expr(object) {
-            if let Some(fields) = self.struct_defs.get(&struct_name) {
-                return fields.iter().position(|f| f == field).unwrap_or(0);
-            }
+        if let Some(struct_name) = self.struct_name_for_expr(object)
+            && let Some(fields) = self.struct_defs.get(&struct_name)
+        {
+            return fields.iter().position(|f| f == field).unwrap_or(0);
         }
         0
     }
