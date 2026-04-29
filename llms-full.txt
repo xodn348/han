@@ -16,20 +16,23 @@
 | 반환 | return | `반환 값` |
 | 변수 | let (mutable) | `변수 이름 = 값` |
 | 상수 | const | `상수 이름 = 값` |
-| 만약 | if | `만약 조건 { }` |
-| 아니면 | else | `아니면 { }` or `아니면 만약 조건 { }` |
+| 만약 | if | `만약 조건 이면 { }` |
+| 이면 | then / conditional marker | `만약 조건 이면 { }` |
+| 아니면 | else | `아니면 { }` or `아니면 조건 이면 { }` |
+| 그리고 | and | `a 그리고 b` |
+| 또는 | or | `a 또는 b` |
 | 반복 | for | `반복 변수 i = 0; i < n; i += 1 { }` |
-| 동안 | while | `동안 조건 { }` |
+| 동안 | while | `조건 동안 { }` or `동안 조건 { }` |
 | 안에서 | in (for-in) | `반복 x 안에서 배열 { }` |
 | 멈춰 | break | `멈춰` |
 | 계속 | continue | `계속` |
 | 구조 | struct | `구조 이름 { 필드: 타입 }` |
 | 구현 | impl | `구현 구조체 { 함수 메서드(자신: T) { } }` |
 | 열거 | enum | `열거 이름 { 변형1, 변형2 }` |
-| 시도 | try | `시도 { } 실패(오류) { }` |
-| 실패 | catch | see 시도 |
-| 맞춰 | match | `맞춰 값 { 패턴 => 결과 }` |
-| 가져오기 | import | `가져오기 "파일.hgl"` |
+| 시도 | try | `시도 { } 처리(오류) { }` |
+| 처리 | catch | see 시도 |
+| 맞춤 | match | `맞춤 값 { 패턴 => 결과 }` |
+| 포함 | import | `포함 "파일.hgl"` |
 | 참 | true | boolean true |
 | 거짓 | false | boolean false |
 | 없음 | null/void | null value |
@@ -85,9 +88,9 @@ Int and Float auto-coerce: `1 + 1.5` → `2.5`
 
 ### If / Else-If / Else
 ```
-만약 점수 >= 90 {
+만약 점수 >= 90 이면 {
     출력("A")
-} 아니면 만약 점수 >= 80 {
+} 아니면 점수 >= 80 이면 {
     출력("B")
 } 아니면 {
     출력("C")
@@ -119,7 +122,7 @@ Int and Float auto-coerce: `1 + 1.5` → `2.5`
 ### While Loop
 ```
 변수 n = 0
-동안 n < 5 {
+n < 5 동안 {
     출력(n)
     n += 1
 }
@@ -180,8 +183,8 @@ arr.삭제(0)           // remove at index
     변수 최소 = arr[0]
     변수 최대 = arr[0]
     반복 v 안에서 arr {
-        만약 v < 최소 { 최소 = v }
-        만약 v > 최대 { 최대 = v }
+        만약 v < 최소 이면 { 최소 = v }
+        만약 v > 최대 이면 { 최대 = v }
     }
     반환 (최소, 최대)
 }
@@ -189,7 +192,7 @@ arr.삭제(0)           // remove at index
 
 ### Pattern Matching
 ```
-맞춰 값 {
+맞춤 값 {
     1 => 출력("하나")
     2 => 출력("둘")
     _ => 출력("기타")
@@ -211,7 +214,7 @@ arr.삭제(0)           // remove at index
 ```
 시도 {
     변수 내용 = 파일읽기("없는파일.txt")
-} 실패(오류) {
+} 처리(오류) {
     출력(형식("에러: {0}", 오류))
 }
 ```
@@ -230,7 +233,7 @@ arr.삭제(0)           // remove at index
 
 ### Modules
 ```
-가져오기 "수학도구.hgl"
+포함 "수학도구.hgl"
 ```
 
 ### Range
@@ -291,7 +294,7 @@ arr.삭제(0)           // remove at index
 
 ### HTTP (reqwest)
 ```
-HTTP_가져오기("https://api.example.com/data")           // GET → 문자열
+HTTP_포함("https://api.example.com/data")               // GET → 문자열
 HTTP_보내기("https://api.example.com/data", 본문)       // POST with JSON → 문자열
 ```
 
@@ -362,11 +365,11 @@ map.삭제(키)           // remove → removed value
 
 ```
 시도 {
-    변수 응답 = HTTP_가져오기("https://jsonplaceholder.typicode.com/todos/1")
+    변수 응답 = HTTP_포함("https://jsonplaceholder.typicode.com/todos/1")
     변수 할일 = 제이슨_파싱(응답)
     출력(형식("제목: {0}", 할일["title"]))
     출력(형식("완료: {0}", 할일["completed"]))
-} 실패(오류) {
+} 처리(오류) {
     출력(형식("API 오류: {0}", 오류))
 }
 ```
@@ -382,7 +385,7 @@ map.삭제(키)           // remove → removed value
     시도 {
         변수 현재 = 빈도[단어]
         빈도[단어] = 현재 + 1
-    } 실패(오류) {
+    } 처리(오류) {
         빈도[단어] = 1
     }
 }
@@ -415,7 +418,7 @@ map.삭제(키)           // remove → removed value
 
 반복 변수 i = 0; i < 목록.길이(); i += 1 {
     변수 상태 = "[ ]"
-    만약 목록[i].완료 {
+    만약 목록[i].완료 이면 {
         상태 = "[✓]"
     }
     출력(형식("{0} {1}. {2}", 상태, i + 1, 목록[i].제목))

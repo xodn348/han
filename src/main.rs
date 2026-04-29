@@ -122,7 +122,12 @@ fn print_banner() {
             "    {}✿{}  {}{}Han (한) Programming Language{}",
             mg, rs, c, b, rs
         );
-        println!("    {}v0.2.0 · github.com/xodn348/han{}", d, rs);
+        println!(
+            "    {}v{} · github.com/xodn348/han{}",
+            d,
+            env!("CARGO_PKG_VERSION"),
+            rs
+        );
         println!();
         println!(
             "  {}◓{}◒{}{} ─────────────────────────────────── {}◓{}◒{}",
@@ -182,7 +187,12 @@ fn print_banner() {
     }
 
     println!();
-    println!(" {}    Korean Programming Language v0.2.0{}", d, rs);
+    println!(
+        " {}    Korean Programming Language v{}{}",
+        d,
+        env!("CARGO_PKG_VERSION"),
+        rs
+    );
     println!(" {}    github.com/xodn348/han{}", d, rs);
     println!();
     println!(

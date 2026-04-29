@@ -18,14 +18,20 @@ const KEYWORDS: &[(&str, &str)] = &[
     ("상수", "immutable constant — `상수 이름 = 값`"),
     (
         "만약",
-        "if conditional — `만약 조건 { ... } 아니면 { ... }`",
+        "if conditional — `만약 조건 이면 { ... } 아니면 { ... }`",
     ),
+    ("이면", "conditional marker — `만약 조건 이면 { ... }`"),
     ("아니면", "else branch"),
+    ("그리고", "logical and"),
+    ("또는", "logical or"),
     (
         "반복",
         "for loop — `반복 변수 i = 0; i < n; i += 1 { ... }`",
     ),
-    ("동안", "while loop — `동안 조건 { ... }`"),
+    (
+        "동안",
+        "while loop — `조건 동안 { ... }` or `동안 조건 { ... }`",
+    ),
     ("멈춰", "break out of loop"),
     ("계속", "continue to next iteration"),
     ("참", "boolean true"),
@@ -35,7 +41,7 @@ const KEYWORDS: &[(&str, &str)] = &[
     ("입력", "read line from stdin — `입력()`"),
     ("구조", "struct definition — `구조 이름 { 필드: 타입 }`"),
     ("시도", "try block — `시도 { ... } 처리(오류) { ... }`"),
-    ("실패", "catch block"),
+    ("처리", "catch block"),
     ("포함", "import module — `포함 \"파일.hgl\"`"),
     ("맞춤", "pattern match — `맞춤 값 { 패턴 => 결과 }`"),
     ("구현", "impl block — `구현 구조체이름 { 함수들 }`"),
@@ -352,7 +358,7 @@ fn initialize_result() -> Value {
         },
         "serverInfo": {
             "name": "han-lsp",
-            "version": "0.1.0",
+            "version": env!("CARGO_PKG_VERSION"),
         },
     })
 }

@@ -2,7 +2,7 @@
   "name": "han-language",
   "displayName": "Han Language",
   "description": "Syntax highlighting and language server (LSP) support for Han (한), the Korean-syntax programming language.",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "publisher": "xodn348",
   "license": "MIT",
   "homepage": "https://xodn348.github.io/han/introduction.html",
