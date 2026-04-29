@@ -84,10 +84,12 @@ fn compile_to_binary(source: &str, output_path: &str) -> Result<(), String> {
 
     fs::write(&ir_path, &ir).map_err(|e| format!("임시 파일 쓰기 실패: {}", e))?;
 
-    let clang_result = Command::new("clang")
-        .arg(&ir_path)
-        .args(["-o", output_path, "-lm"])
-        .status();
+    let mut clang = Command::new("clang");
+    clang.arg(&ir_path).args(["-o", output_path]);
+    if !cfg!(windows) {
+        clang.arg("-lm");
+    }
+    let clang_result = clang.status();
 
     let _ = fs::remove_file(&ir_path);
 
