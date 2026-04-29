@@ -398,6 +398,7 @@ dependencies = [
  "pyo3",
  "regex",
  "reqwest",
+ "serde",
  "serde_json",
  "wasm-bindgen",
 ]
