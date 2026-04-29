@@ -122,6 +122,13 @@
     .run-btn:hover { background: #2ea043; }
     .run-btn:disabled { background: #21262d; color: #8b949e; cursor: not-allowed; }
 
+    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .reset-btn {
+      font-size: 12px; color: #8b949e; background: transparent;
+      border: 1px solid #21262d; padding: 5px 10px; border-radius: 6px; cursor: pointer;
+    }
+    .reset-btn:hover { color: #c9d1d9; border-color: #6e7681; }
+
     .examples {
       padding: 8px 16px;
       background: #161b22;
@@ -161,7 +168,10 @@
   <div class="panel">
     <div class="panel-header">
       <span>코드 편집기</span>
-      <button class="run-btn" id="runBtn" onclick="runCode()">▶ 실행</button>
+      <span class="header-actions">
+        <button class="reset-btn" id="resetBtn" onclick="resetCode()">초기 예제로 복원</button>
+        <button class="run-btn" id="runBtn" onclick="runCode()">▶ 실행</button>
+      </span>
     </div>
     <div id="editor"></div>
     <div class="examples">
@@ -409,9 +419,27 @@
   const initialCode = `출력("Golden — KPOP Demon Hunters")
 출력("밝게 빛나는 우린")`;
 
+  function loadSavedCode() {
+    try {
+      const saved = localStorage.getItem('han-playground-code');
+      if (saved && saved.length > 0) return saved;
+    } catch {}
+    return null;
+  }
+
+  function saveCode(code) {
+    try { localStorage.setItem('han-playground-code', code); } catch {}
+  }
+
+  function clearSavedCode() {
+    try { localStorage.removeItem('han-playground-code'); } catch {}
+  }
+
+  const startingDoc = loadSavedCode() ?? initialCode;
+
   view = new EditorView({
     state: EditorState.create({
-      doc: initialCode,
+      doc: startingDoc,
       extensions: [
         lineNumbers(),
         highlightActiveLine(),
@@ -420,6 +448,11 @@
         editorTheme,
         keymap.of([...defaultKeymap, indentWithTab]),
         EditorView.lineWrapping,
+        EditorView.updateListener.of((v) => {
+          if (v.docChanged) {
+            saveCode(v.state.doc.toString());
+          }
+        }),
       ]
     }),
     parent: document.getElementById('editor')
@@ -449,6 +482,13 @@
     view.dispatch({
       changes: { from: 0, to: view.state.doc.length, insert: EXAMPLES[name] }
     });
+  };
+
+  window.resetCode = function() {
+    view.dispatch({
+      changes: { from: 0, to: view.state.doc.length, insert: initialCode }
+    });
+    clearSavedCode();
   };
 
   window.addEventListener('keydown', (e) => {

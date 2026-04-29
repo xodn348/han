@@ -1,18 +1,24 @@
 {
   "name": "han-language",
   "displayName": "Han Language",
-  "description": "Syntax highlighting and LSP support for the Han (한) programming language",
+  "description": "Syntax highlighting and language server (LSP) support for Han (한), the Korean-syntax programming language.",
   "version": "0.2.0",
   "publisher": "xodn348",
+  "license": "MIT",
+  "homepage": "https://xodn348.github.io/han/introduction.html",
   "repository": {
     "type": "git",
-    "url": "https://github.com/xodn348/han"
+    "url": "https://github.com/xodn348/han.git"
+  },
+  "bugs": {
+    "url": "https://github.com/xodn348/han/issues"
   },
   "engines": {
     "vscode": "^1.75.0"
   },
   "categories": [
-    "Programming Languages"
+    "Programming Languages",
+    "Linters"
   ],
   "keywords": [
     "han",
