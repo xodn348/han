@@ -5,7 +5,7 @@ use crate::ast::Expr;
 
 use super::env::{EnvRef, RuntimeError};
 use super::evaluator::eval_expr;
-use super::value::{json_to_value, value_to_json, Value};
+use super::value::{Value, json_to_value, value_to_json};
 
 pub(crate) fn eval_builtin_stdlib(
     name: &str,

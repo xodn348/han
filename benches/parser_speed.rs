@@ -2,8 +2,8 @@ use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use std::fs;
 
 fn bench_parse_fibonacci(c: &mut Criterion) {
-    let source = fs::read_to_string("examples/피보나치.hgl")
-        .expect("examples/피보나치.hgl should exist");
+    let source =
+        fs::read_to_string("examples/피보나치.hgl").expect("examples/피보나치.hgl should exist");
 
     c.bench_function("parse_fibonacci", |b| {
         b.iter(|| {
@@ -14,8 +14,8 @@ fn bench_parse_fibonacci(c: &mut Criterion) {
 }
 
 fn bench_parse_factorial(c: &mut Criterion) {
-    let source = fs::read_to_string("examples/팩토리얼.hgl")
-        .expect("examples/팩토리얼.hgl should exist");
+    let source =
+        fs::read_to_string("examples/팩토리얼.hgl").expect("examples/팩토리얼.hgl should exist");
 
     c.bench_function("parse_factorial", |b| {
         b.iter(|| {
@@ -42,8 +42,8 @@ fn bench_parse_large_synthetic(c: &mut Criterion) {
 }
 
 fn bench_lex_only(c: &mut Criterion) {
-    let source = fs::read_to_string("examples/할일목록.hgl")
-        .expect("examples/할일목록.hgl should exist");
+    let source =
+        fs::read_to_string("examples/할일목록.hgl").expect("examples/할일목록.hgl should exist");
 
     c.bench_function("lex_todo_list", |b| {
         b.iter(|| {

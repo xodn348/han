@@ -5,7 +5,8 @@ use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 fn interpret_file(path: &str) -> String {
-    let source = fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {}: {}", path, e));
+    let source =
+        fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {}: {}", path, e));
     han::interpreter::capture_start();
     let tokens = han::lexer::tokenize(&source);
     let program = han::parser::parse(tokens).unwrap();

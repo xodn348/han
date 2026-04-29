@@ -7,7 +7,7 @@ mod evaluator;
 #[allow(unused_imports)]
 pub use env::{EnvRef, Environment, RuntimeError};
 #[allow(unused_imports)]
-pub use evaluator::{eval_block, eval_expr, eval_stmt, interpret, Signal};
+pub use evaluator::{Signal, eval_block, eval_expr, eval_stmt, interpret};
 pub use value::Value;
 
 use std::cell::RefCell;

@@ -351,7 +351,8 @@ impl ExprVisitor<String> for CodeGen {
                         }
                     }
                     _ => {
-                        let arg_vals: Vec<String> = args.iter().map(|a| self.visit_expr(a)).collect();
+                        let arg_vals: Vec<String> =
+                            args.iter().map(|a| self.visit_expr(a)).collect();
                         let mut all_args = vec![format!("{} {}", obj_ty, obj_val)];
                         for av in &arg_vals {
                             all_args.push(format!("i64 {}", av));

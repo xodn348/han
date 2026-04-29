@@ -10,8 +10,8 @@ fn run_program(source: &str) {
 }
 
 fn bench_interpret_fibonacci(c: &mut Criterion) {
-    let source = fs::read_to_string("examples/피보나치.hgl")
-        .expect("examples/피보나치.hgl should exist");
+    let source =
+        fs::read_to_string("examples/피보나치.hgl").expect("examples/피보나치.hgl should exist");
 
     c.bench_function("interpret_fibonacci", |b| {
         b.iter(|| run_program(black_box(&source)));
@@ -19,8 +19,7 @@ fn bench_interpret_fibonacci(c: &mut Criterion) {
 }
 
 fn bench_interpret_sum(c: &mut Criterion) {
-    let source = fs::read_to_string("examples/합계.hgl")
-        .expect("examples/합계.hgl should exist");
+    let source = fs::read_to_string("examples/합계.hgl").expect("examples/합계.hgl should exist");
 
     c.bench_function("interpret_sum_to_100", |b| {
         b.iter(|| run_program(black_box(&source)));

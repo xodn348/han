@@ -42,361 +42,365 @@ impl<'a> ExprVisitor<Result<Value, RuntimeError>> for Evaluator<'a> {
         let env = self.env;
         let line = self.line;
         match expr {
-        Expr::IntLiteral(n) => Ok(Value::Int(*n)),
-        Expr::FloatLiteral(f) => Ok(Value::Float(*f)),
-        Expr::StringLiteral(s) => Ok(Value::Str(s.clone())),
-        Expr::BoolLiteral(b) => Ok(Value::Bool(*b)),
-        Expr::NullLiteral => Ok(Value::Void),
+            Expr::IntLiteral(n) => Ok(Value::Int(*n)),
+            Expr::FloatLiteral(f) => Ok(Value::Float(*f)),
+            Expr::StringLiteral(s) => Ok(Value::Str(s.clone())),
+            Expr::BoolLiteral(b) => Ok(Value::Bool(*b)),
+            Expr::NullLiteral => Ok(Value::Void),
 
-        Expr::Identifier(name) => env
-            .borrow()
-            .get(name)
-            .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 변수: {}", name), line)),
-
-        Expr::Assign { name, value } => {
-            if env.borrow().is_const(name) {
-                return Err(RuntimeError::new(
-                    format!("상수 '{}'는 재할당할 수 없습니다", name),
-                    line,
-                ));
-            }
-            let val = self.visit_expr(value)?;
-            let updated = env.borrow_mut().update(name, val.clone());
-            if !updated {
-                env.borrow_mut().set(name.clone(), val.clone());
-            }
-            Ok(val)
-        }
-
-        Expr::BinaryOp { op, left, right } => {
-            let lv = self.visit_expr(left)?;
-            let rv = self.visit_expr(right)?;
-            eval_binary_op(op, lv, rv, line)
-        }
-
-        Expr::UnaryOp { op, expr } => {
-            let val = self.visit_expr(expr)?;
-            match op {
-                UnaryOpKind::Neg => match val {
-                    Value::Int(n) => Ok(Value::Int(-n)),
-                    Value::Float(f) => Ok(Value::Float(-f)),
-                    _ => Err(RuntimeError::new(
-                        "단항 음수는 정수/실수에만 적용 가능",
-                        line,
-                    )),
-                },
-                UnaryOpKind::Not => match val {
-                    Value::Bool(b) => Ok(Value::Bool(!b)),
-                    _ => Err(RuntimeError::new("논리 부정은 불 값에만 적용 가능", line)),
-                },
-            }
-        }
-
-        Expr::Call { name, args } => {
-            if name == "출력" {
-                let mut parts = Vec::new();
-                for arg in args {
-                    let v = self.visit_expr(arg)?;
-                    parts.push(v.to_string());
-                }
-                output_line(&parts.join(" "));
-                return Ok(Value::Void);
-            }
-
-            if name == "입력" {
-                let stdin = io::stdin();
-                let mut buf = String::new();
-                stdin
-                    .lock()
-                    .read_line(&mut buf)
-                    .map_err(|e| RuntimeError::new(format!("입력 오류: {}", e), line))?;
-                return Ok(Value::Str(buf.trim_end_matches('\n').to_string()));
-            }
-
-            if let Some(result) = eval_builtin_math(name, args, env, line)? {
-                return Ok(result);
-            }
-
-            if let Some(result) = eval_builtin_stdlib(name, args, env, line)? {
-                return Ok(result);
-            }
-
-            if name == "사전" {
-                let mut pairs = Vec::new();
-                let mut i = 0;
-                while i + 1 < args.len() {
-                    let key = self.visit_expr(&args[i])?;
-                    let val = self.visit_expr(&args[i + 1])?;
-                    pairs.push((key, val));
-                    i += 2;
-                }
-                return Ok(Value::Map(Rc::new(RefCell::new(pairs))));
-            }
-
-            if let Some(result) = eval_builtin_io(name, args, env, line)? {
-                return Ok(result);
-            }
-
-            let func_val = env
+            Expr::Identifier(name) => env
                 .borrow()
                 .get(name)
-                .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 함수: {}", name), line))?;
+                .ok_or_else(|| RuntimeError::new(format!("정의되지 않은 변수: {}", name), line)),
 
-            match func_val {
-                Value::Function { params, body } => {
-                    if args.len() != params.len() {
-                        return Err(RuntimeError::new(
-                            format!(
-                                "함수 '{}': 인자 수 불일치 (기대 {}, 실제 {})",
-                                name,
-                                params.len(),
-                                args.len()
-                            ),
-                            line,
-                        ));
-                    }
-
-                    let mut arg_vals = Vec::new();
-                    for arg in args {
-                        arg_vals.push(self.visit_expr(arg)?);
-                    }
-
-                    let func_env = Environment::new_enclosed_ref(env.clone());
-                    for ((param_name, _ty), val) in params.iter().zip(arg_vals) {
-                        func_env.borrow_mut().set(param_name.clone(), val);
-                    }
-
-                    match eval_block(&body, &func_env) {
-                        Ok(Some(Signal::Return(v))) => Ok(v),
-                        Ok(_) => Ok(Value::Void),
-                        Err(e) => Err(e.with_frame(format!("  함수 '{}' ({}번째 줄)", name, line))),
-                    }
-                }
-                Value::Closure {
-                    params,
-                    body,
-                    env: captured_env,
-                } => {
-                    if args.len() != params.len() {
-                        return Err(RuntimeError::new(
-                            format!(
-                                "람다 '{}': 인자 수 불일치 (기대 {}, 실제 {})",
-                                name,
-                                params.len(),
-                                args.len()
-                            ),
-                            line,
-                        ));
-                    }
-                    let mut arg_vals = Vec::new();
-                    for arg in args {
-                        arg_vals.push(self.visit_expr(arg)?);
-                    }
-                    let closure_env = Environment::new_enclosed_ref(captured_env);
-                    for ((param_name, _), val) in params.iter().zip(arg_vals) {
-                        closure_env.borrow_mut().set(param_name.clone(), val);
-                    }
-                    match eval_block(&body, &closure_env)? {
-                        Some(Signal::Return(v)) => Ok(v),
-                        _ => Ok(Value::Void),
-                    }
-                }
-                _ => Err(RuntimeError::new(
-                    format!("'{}' 는 함수가 아닙니다", name),
-                    line,
-                )),
-            }
-        }
-
-        Expr::ArrayLiteral(elems) => {
-            let mut vals = Vec::new();
-            for e in elems {
-                vals.push(self.visit_expr(e)?);
-            }
-            Ok(Value::Array(Rc::new(RefCell::new(vals))))
-        }
-
-        Expr::Index { object, index } => {
-            let obj = self.visit_expr(object)?;
-            let idx = self.visit_expr(index)?;
-            match (obj, idx) {
-                (Value::Array(arr), Value::Int(i)) => {
-                    let arr = arr.borrow();
-                    let len = arr.len() as i64;
-                    let i = if i < 0 { len + i } else { i };
-                    if i < 0 || i >= len {
-                        Err(RuntimeError::new(
-                            format!("인덱스 범위 초과: {} (길이 {})", i, len),
-                            line,
-                        ))
-                    } else {
-                        Ok(arr[i as usize].clone())
-                    }
-                }
-                (Value::Str(s), Value::Int(i)) => {
-                    let chars: Vec<char> = s.chars().collect();
-                    let len = chars.len() as i64;
-                    let i = if i < 0 { len + i } else { i };
-                    if i < 0 || i >= len {
-                        Err(RuntimeError::new(
-                            format!("문자열 인덱스 범위 초과: {}", i),
-                            line,
-                        ))
-                    } else {
-                        Ok(Value::Str(chars[i as usize].to_string()))
-                    }
-                }
-                (Value::Map(map), key) => {
-                    let map = map.borrow();
-                    for (k, v) in map.iter() {
-                        if values_equal(k, &key) {
-                            return Ok(v.clone());
-                        }
-                    }
-                    Err(RuntimeError::new(
-                        format!("사전에 키가 없음: {}", key),
+            Expr::Assign { name, value } => {
+                if env.borrow().is_const(name) {
+                    return Err(RuntimeError::new(
+                        format!("상수 '{}'는 재할당할 수 없습니다", name),
                         line,
-                    ))
+                    ));
                 }
-                _ => Err(RuntimeError::new("인덱싱 불가 타입", line)),
+                let val = self.visit_expr(value)?;
+                let updated = env.borrow_mut().update(name, val.clone());
+                if !updated {
+                    env.borrow_mut().set(name.clone(), val.clone());
+                }
+                Ok(val)
             }
-        }
 
-        Expr::IndexAssign {
-            object,
-            index,
-            value,
-        } => {
-            let obj = self.visit_expr(object)?;
-            let idx = self.visit_expr(index)?;
-            let val = self.visit_expr(value)?;
-            match (obj, idx) {
-                (Value::Array(arr), Value::Int(i)) => {
-                    let mut arr = arr.borrow_mut();
-                    let len = arr.len() as i64;
-                    let i = if i < 0 { len + i } else { i };
-                    if i < 0 || i >= len {
-                        return Err(RuntimeError::new(format!("인덱스 범위 초과: {}", i), line));
-                    }
-                    arr[i as usize] = val.clone();
-                    Ok(val)
+            Expr::BinaryOp { op, left, right } => {
+                let lv = self.visit_expr(left)?;
+                let rv = self.visit_expr(right)?;
+                eval_binary_op(op, lv, rv, line)
+            }
+
+            Expr::UnaryOp { op, expr } => {
+                let val = self.visit_expr(expr)?;
+                match op {
+                    UnaryOpKind::Neg => match val {
+                        Value::Int(n) => Ok(Value::Int(-n)),
+                        Value::Float(f) => Ok(Value::Float(-f)),
+                        _ => Err(RuntimeError::new(
+                            "단항 음수는 정수/실수에만 적용 가능",
+                            line,
+                        )),
+                    },
+                    UnaryOpKind::Not => match val {
+                        Value::Bool(b) => Ok(Value::Bool(!b)),
+                        _ => Err(RuntimeError::new("논리 부정은 불 값에만 적용 가능", line)),
+                    },
                 }
-                (Value::Map(map), key) => {
-                    let mut map = map.borrow_mut();
-                    for entry in map.iter_mut() {
-                        if values_equal(&entry.0, &key) {
-                            entry.1 = val.clone();
-                            return Ok(val);
+            }
+
+            Expr::Call { name, args } => {
+                if name == "출력" {
+                    let mut parts = Vec::new();
+                    for arg in args {
+                        let v = self.visit_expr(arg)?;
+                        parts.push(v.to_string());
+                    }
+                    output_line(&parts.join(" "));
+                    return Ok(Value::Void);
+                }
+
+                if name == "입력" {
+                    let stdin = io::stdin();
+                    let mut buf = String::new();
+                    stdin
+                        .lock()
+                        .read_line(&mut buf)
+                        .map_err(|e| RuntimeError::new(format!("입력 오류: {}", e), line))?;
+                    return Ok(Value::Str(buf.trim_end_matches('\n').to_string()));
+                }
+
+                if let Some(result) = eval_builtin_math(name, args, env, line)? {
+                    return Ok(result);
+                }
+
+                if let Some(result) = eval_builtin_stdlib(name, args, env, line)? {
+                    return Ok(result);
+                }
+
+                if name == "사전" {
+                    let mut pairs = Vec::new();
+                    let mut i = 0;
+                    while i + 1 < args.len() {
+                        let key = self.visit_expr(&args[i])?;
+                        let val = self.visit_expr(&args[i + 1])?;
+                        pairs.push((key, val));
+                        i += 2;
+                    }
+                    return Ok(Value::Map(Rc::new(RefCell::new(pairs))));
+                }
+
+                if let Some(result) = eval_builtin_io(name, args, env, line)? {
+                    return Ok(result);
+                }
+
+                let func_val = env.borrow().get(name).ok_or_else(|| {
+                    RuntimeError::new(format!("정의되지 않은 함수: {}", name), line)
+                })?;
+
+                match func_val {
+                    Value::Function { params, body } => {
+                        if args.len() != params.len() {
+                            return Err(RuntimeError::new(
+                                format!(
+                                    "함수 '{}': 인자 수 불일치 (기대 {}, 실제 {})",
+                                    name,
+                                    params.len(),
+                                    args.len()
+                                ),
+                                line,
+                            ));
+                        }
+
+                        let mut arg_vals = Vec::new();
+                        for arg in args {
+                            arg_vals.push(self.visit_expr(arg)?);
+                        }
+
+                        let func_env = Environment::new_enclosed_ref(env.clone());
+                        for ((param_name, _ty), val) in params.iter().zip(arg_vals) {
+                            func_env.borrow_mut().set(param_name.clone(), val);
+                        }
+
+                        match eval_block(&body, &func_env) {
+                            Ok(Some(Signal::Return(v))) => Ok(v),
+                            Ok(_) => Ok(Value::Void),
+                            Err(e) => {
+                                Err(e.with_frame(format!("  함수 '{}' ({}번째 줄)", name, line)))
+                            }
                         }
                     }
-                    map.push((key, val.clone()));
-                    Ok(val)
+                    Value::Closure {
+                        params,
+                        body,
+                        env: captured_env,
+                    } => {
+                        if args.len() != params.len() {
+                            return Err(RuntimeError::new(
+                                format!(
+                                    "람다 '{}': 인자 수 불일치 (기대 {}, 실제 {})",
+                                    name,
+                                    params.len(),
+                                    args.len()
+                                ),
+                                line,
+                            ));
+                        }
+                        let mut arg_vals = Vec::new();
+                        for arg in args {
+                            arg_vals.push(self.visit_expr(arg)?);
+                        }
+                        let closure_env = Environment::new_enclosed_ref(captured_env);
+                        for ((param_name, _), val) in params.iter().zip(arg_vals) {
+                            closure_env.borrow_mut().set(param_name.clone(), val);
+                        }
+                        match eval_block(&body, &closure_env)? {
+                            Some(Signal::Return(v)) => Ok(v),
+                            _ => Ok(Value::Void),
+                        }
+                    }
+                    _ => Err(RuntimeError::new(
+                        format!("'{}' 는 함수가 아닙니다", name),
+                        line,
+                    )),
                 }
-                _ => Err(RuntimeError::new("인덱스 할당: 배열/사전 타입 필요", line)),
             }
-        }
 
-        Expr::MethodCall {
-            object,
-            method,
-            args,
-        } => {
-            let obj = self.visit_expr(object)?;
-            eval_method(obj, method, args, env, line)
-        }
-
-        Expr::FieldAccess { object, field } => {
-            let obj = self.visit_expr(object)?;
-            match obj {
-                Value::Struct { fields, .. } => {
-                    fields.borrow().get(field.as_str()).cloned().ok_or_else(|| {
-                        RuntimeError::new(format!("존재하지 않는 필드: {}", field), line)
-                    })
+            Expr::ArrayLiteral(elems) => {
+                let mut vals = Vec::new();
+                for e in elems {
+                    vals.push(self.visit_expr(e)?);
                 }
-                _ => Err(RuntimeError::new("필드 접근: 구조체 타입 필요", line)),
+                Ok(Value::Array(Rc::new(RefCell::new(vals))))
             }
-        }
 
-        Expr::FieldAssign {
-            object,
-            field,
-            value,
-        } => {
-            let obj = self.visit_expr(object)?;
-            let val = self.visit_expr(value)?;
-            match obj {
-                Value::Struct { fields, .. } => {
-                    fields.borrow_mut().insert(field.clone(), val.clone());
-                    Ok(val)
-                }
-                _ => Err(RuntimeError::new("필드 할당: 구조체 타입 필요", line)),
-            }
-        }
-
-        Expr::StructLiteral { name, fields } => {
-            let mut map = HashMap::new();
-            for (fname, fexpr) in fields {
-                map.insert(fname.clone(), self.visit_expr(fexpr)?);
-            }
-            Ok(Value::Struct {
-                name: name.clone(),
-                fields: Rc::new(RefCell::new(map)),
-            })
-        }
-
-        Expr::Lambda { params, body } => Ok(Value::Closure {
-            params: params.clone(),
-            body: body.clone(),
-            env: env.clone(),
-        }),
-
-        Expr::Range { start, end } => {
-            let s = match self.visit_expr(start)? {
-                Value::Int(n) => n,
-                _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
-            };
-            let e = match self.visit_expr(end)? {
-                Value::Int(n) => n,
-                _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
-            };
-            let vals: Vec<Value> = (s..e).map(Value::Int).collect();
-            Ok(Value::Array(Rc::new(RefCell::new(vals))))
-        }
-
-        Expr::TupleLiteral(elems) => {
-            let mut vals = Vec::new();
-            for e in elems {
-                vals.push(self.visit_expr(e)?);
-            }
-            Ok(Value::Tuple(vals))
-        }
-
-        Expr::TupleIndex { object, index } => {
-            let obj = self.visit_expr(object)?;
-            match obj {
-                Value::Tuple(vals) => {
-                    if *index >= vals.len() {
+            Expr::Index { object, index } => {
+                let obj = self.visit_expr(object)?;
+                let idx = self.visit_expr(index)?;
+                match (obj, idx) {
+                    (Value::Array(arr), Value::Int(i)) => {
+                        let arr = arr.borrow();
+                        let len = arr.len() as i64;
+                        let i = if i < 0 { len + i } else { i };
+                        if i < 0 || i >= len {
+                            Err(RuntimeError::new(
+                                format!("인덱스 범위 초과: {} (길이 {})", i, len),
+                                line,
+                            ))
+                        } else {
+                            Ok(arr[i as usize].clone())
+                        }
+                    }
+                    (Value::Str(s), Value::Int(i)) => {
+                        let chars: Vec<char> = s.chars().collect();
+                        let len = chars.len() as i64;
+                        let i = if i < 0 { len + i } else { i };
+                        if i < 0 || i >= len {
+                            Err(RuntimeError::new(
+                                format!("문자열 인덱스 범위 초과: {}", i),
+                                line,
+                            ))
+                        } else {
+                            Ok(Value::Str(chars[i as usize].to_string()))
+                        }
+                    }
+                    (Value::Map(map), key) => {
+                        let map = map.borrow();
+                        for (k, v) in map.iter() {
+                            if values_equal(k, &key) {
+                                return Ok(v.clone());
+                            }
+                        }
                         Err(RuntimeError::new(
-                            format!("튜플 인덱스 범위 초과: {} (길이 {})", index, vals.len()),
+                            format!("사전에 키가 없음: {}", key),
                             line,
                         ))
-                    } else {
-                        Ok(vals[*index].clone())
                     }
+                    _ => Err(RuntimeError::new("인덱싱 불가 타입", line)),
                 }
-                _ => Err(RuntimeError::new("튜플 인덱싱: 튜플 타입 필요", line)),
             }
-        }
 
-        Expr::MapLiteral(entries) => {
-            let mut pairs = Vec::new();
-            for (k, v) in entries {
-                let key = self.visit_expr(k)?;
-                let val = self.visit_expr(v)?;
-                pairs.push((key, val));
+            Expr::IndexAssign {
+                object,
+                index,
+                value,
+            } => {
+                let obj = self.visit_expr(object)?;
+                let idx = self.visit_expr(index)?;
+                let val = self.visit_expr(value)?;
+                match (obj, idx) {
+                    (Value::Array(arr), Value::Int(i)) => {
+                        let mut arr = arr.borrow_mut();
+                        let len = arr.len() as i64;
+                        let i = if i < 0 { len + i } else { i };
+                        if i < 0 || i >= len {
+                            return Err(RuntimeError::new(
+                                format!("인덱스 범위 초과: {}", i),
+                                line,
+                            ));
+                        }
+                        arr[i as usize] = val.clone();
+                        Ok(val)
+                    }
+                    (Value::Map(map), key) => {
+                        let mut map = map.borrow_mut();
+                        for entry in map.iter_mut() {
+                            if values_equal(&entry.0, &key) {
+                                entry.1 = val.clone();
+                                return Ok(val);
+                            }
+                        }
+                        map.push((key, val.clone()));
+                        Ok(val)
+                    }
+                    _ => Err(RuntimeError::new("인덱스 할당: 배열/사전 타입 필요", line)),
+                }
             }
-            Ok(Value::Map(Rc::new(RefCell::new(pairs))))
-        }
+
+            Expr::MethodCall {
+                object,
+                method,
+                args,
+            } => {
+                let obj = self.visit_expr(object)?;
+                eval_method(obj, method, args, env, line)
+            }
+
+            Expr::FieldAccess { object, field } => {
+                let obj = self.visit_expr(object)?;
+                match obj {
+                    Value::Struct { fields, .. } => {
+                        fields.borrow().get(field.as_str()).cloned().ok_or_else(|| {
+                            RuntimeError::new(format!("존재하지 않는 필드: {}", field), line)
+                        })
+                    }
+                    _ => Err(RuntimeError::new("필드 접근: 구조체 타입 필요", line)),
+                }
+            }
+
+            Expr::FieldAssign {
+                object,
+                field,
+                value,
+            } => {
+                let obj = self.visit_expr(object)?;
+                let val = self.visit_expr(value)?;
+                match obj {
+                    Value::Struct { fields, .. } => {
+                        fields.borrow_mut().insert(field.clone(), val.clone());
+                        Ok(val)
+                    }
+                    _ => Err(RuntimeError::new("필드 할당: 구조체 타입 필요", line)),
+                }
+            }
+
+            Expr::StructLiteral { name, fields } => {
+                let mut map = HashMap::new();
+                for (fname, fexpr) in fields {
+                    map.insert(fname.clone(), self.visit_expr(fexpr)?);
+                }
+                Ok(Value::Struct {
+                    name: name.clone(),
+                    fields: Rc::new(RefCell::new(map)),
+                })
+            }
+
+            Expr::Lambda { params, body } => Ok(Value::Closure {
+                params: params.clone(),
+                body: body.clone(),
+                env: env.clone(),
+            }),
+
+            Expr::Range { start, end } => {
+                let s = match self.visit_expr(start)? {
+                    Value::Int(n) => n,
+                    _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
+                };
+                let e = match self.visit_expr(end)? {
+                    Value::Int(n) => n,
+                    _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
+                };
+                let vals: Vec<Value> = (s..e).map(Value::Int).collect();
+                Ok(Value::Array(Rc::new(RefCell::new(vals))))
+            }
+
+            Expr::TupleLiteral(elems) => {
+                let mut vals = Vec::new();
+                for e in elems {
+                    vals.push(self.visit_expr(e)?);
+                }
+                Ok(Value::Tuple(vals))
+            }
+
+            Expr::TupleIndex { object, index } => {
+                let obj = self.visit_expr(object)?;
+                match obj {
+                    Value::Tuple(vals) => {
+                        if *index >= vals.len() {
+                            Err(RuntimeError::new(
+                                format!("튜플 인덱스 범위 초과: {} (길이 {})", index, vals.len()),
+                                line,
+                            ))
+                        } else {
+                            Ok(vals[*index].clone())
+                        }
+                    }
+                    _ => Err(RuntimeError::new("튜플 인덱싱: 튜플 타입 필요", line)),
+                }
+            }
+
+            Expr::MapLiteral(entries) => {
+                let mut pairs = Vec::new();
+                for (k, v) in entries {
+                    let key = self.visit_expr(k)?;
+                    let val = self.visit_expr(v)?;
+                    pairs.push((key, val));
+                }
+                Ok(Value::Map(Rc::new(RefCell::new(pairs))))
+            }
         }
     }
 }
@@ -716,242 +720,243 @@ impl<'a> StmtVisitor<Result<Option<Signal>, RuntimeError>> for Evaluator<'a> {
         let env = self.env;
         let line = self.line;
         match &stmt.kind {
-        StmtKind::VarDecl {
-            name,
-            value,
-            mutable,
-            ..
-        } => {
-            let val = self.visit_expr(value)?;
-            if *mutable {
-                env.borrow_mut().set(name.clone(), val);
-            } else {
-                env.borrow_mut().set_const(name.clone(), val);
+            StmtKind::VarDecl {
+                name,
+                value,
+                mutable,
+                ..
+            } => {
+                let val = self.visit_expr(value)?;
+                if *mutable {
+                    env.borrow_mut().set(name.clone(), val);
+                } else {
+                    env.borrow_mut().set_const(name.clone(), val);
+                }
+                Ok(None)
             }
-            Ok(None)
-        }
 
-        StmtKind::FuncDef {
-            name, params, body, ..
-        } => {
-            let func = Value::Function {
-                params: params.clone(),
-                body: body.clone(),
-            };
-            env.borrow_mut().set(name.clone(), func);
-            Ok(None)
-        }
+            StmtKind::FuncDef {
+                name, params, body, ..
+            } => {
+                let func = Value::Function {
+                    params: params.clone(),
+                    body: body.clone(),
+                };
+                env.borrow_mut().set(name.clone(), func);
+                Ok(None)
+            }
 
-        StmtKind::Return(expr_opt) => {
-            let val = match expr_opt {
-                Some(expr) => self.visit_expr(expr)?,
-                None => Value::Void,
-            };
-            Ok(Some(Signal::Return(val)))
-        }
+            StmtKind::Return(expr_opt) => {
+                let val = match expr_opt {
+                    Some(expr) => self.visit_expr(expr)?,
+                    None => Value::Void,
+                };
+                Ok(Some(Signal::Return(val)))
+            }
 
-        StmtKind::If {
-            cond,
-            then_block,
-            else_block,
-        } => {
-            let cond_val = self.visit_expr(cond)?;
-            match cond_val {
-                Value::Bool(true) => eval_block(then_block, env),
-                Value::Bool(false) => {
-                    if let Some(else_stmts) = else_block {
-                        eval_block(else_stmts, env)
-                    } else {
+            StmtKind::If {
+                cond,
+                then_block,
+                else_block,
+            } => {
+                let cond_val = self.visit_expr(cond)?;
+                match cond_val {
+                    Value::Bool(true) => eval_block(then_block, env),
+                    Value::Bool(false) => {
+                        if let Some(else_stmts) = else_block {
+                            eval_block(else_stmts, env)
+                        } else {
+                            Ok(None)
+                        }
+                    }
+                    _ => Err(RuntimeError::new("조건문: 불 값이 필요합니다", line)),
+                }
+            }
+
+            StmtKind::WhileLoop { cond, body } => {
+                loop {
+                    let cond_val = self.visit_expr(cond)?;
+                    match cond_val {
+                        Value::Bool(true) => {}
+                        Value::Bool(false) => break,
+                        _ => return Err(RuntimeError::new("동안 조건: 불 값이 필요합니다", line)),
+                    }
+                    match eval_block(body, env)? {
+                        Some(Signal::Break) => break,
+                        Some(Signal::Continue) => continue,
+                        Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
+                        None => {}
+                    }
+                }
+                Ok(None)
+            }
+
+            StmtKind::ForLoop {
+                init,
+                cond,
+                step,
+                body,
+            } => {
+                self.visit_stmt(init)?;
+                loop {
+                    let cond_val = self.visit_expr(cond)?;
+                    match cond_val {
+                        Value::Bool(true) => {}
+                        Value::Bool(false) => break,
+                        _ => return Err(RuntimeError::new("반복 조건: 불 값이 필요합니다", line)),
+                    }
+                    match eval_block(body, env)? {
+                        Some(Signal::Break) => break,
+                        Some(Signal::Continue) => {
+                            self.visit_stmt(step)?;
+                            continue;
+                        }
+                        Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
+                        None => {}
+                    }
+                    self.visit_stmt(step)?;
+                }
+                Ok(None)
+            }
+
+            StmtKind::Break => Ok(Some(Signal::Break)),
+            StmtKind::Continue => Ok(Some(Signal::Continue)),
+
+            StmtKind::ExprStmt(expr) => {
+                self.visit_expr(expr)?;
+                Ok(None)
+            }
+
+            StmtKind::StructDef { name, .. } => {
+                env.borrow_mut()
+                    .set(name.clone(), Value::Str(format!("<구조체 {}>", name)));
+                Ok(None)
+            }
+
+            StmtKind::TryCatch {
+                try_block,
+                error_name,
+                catch_block,
+            } => match eval_block(try_block, env) {
+                Ok(sig) => Ok(sig),
+                Err(e) => {
+                    env.borrow_mut()
+                        .set(error_name.clone(), Value::Str(e.message.clone()));
+                    eval_block(catch_block, env)
+                }
+            },
+
+            StmtKind::Import(path) => {
+                let resolved_path = std::fs::canonicalize(path)
+                    .map(|p| p.to_string_lossy().to_string())
+                    .unwrap_or_else(|_| path.clone());
+
+                if env.borrow().has_imported_path(&resolved_path) {
+                    return Ok(None);
+                }
+
+                env.borrow_mut().mark_imported_path(&resolved_path);
+
+                let import_result = (|| -> Result<(), RuntimeError> {
+                    let source = std::fs::read_to_string(&resolved_path).map_err(|e| {
+                        RuntimeError::new(format!("포함 실패 '{}': {}", path, e), line)
+                    })?;
+                    let tokens = crate::lexer::tokenize(&source);
+                    let program = crate::parser::parse(tokens).map_err(|e| {
+                        RuntimeError::new(format!("'{}' 파싱 오류: {}", path, e.message), line)
+                    })?;
+                    eval_block(&program.stmts, env)?;
+                    Ok(())
+                })();
+
+                if let Err(err) = import_result {
+                    env.borrow_mut().unmark_imported_path(&resolved_path);
+                    return Err(err);
+                }
+
+                Ok(None)
+            }
+
+            StmtKind::Match { expr, arms } => {
+                let val = self.visit_expr(expr)?;
+                for arm in arms {
+                    if pattern_matches(&arm.pattern, &val, env) {
+                        return eval_block(&arm.body, env);
+                    }
+                }
+                Ok(None)
+            }
+
+            StmtKind::ImplBlock {
+                struct_name,
+                methods,
+            } => {
+                for method_stmt in methods {
+                    if let StmtKind::FuncDef {
+                        name,
+                        params,
+                        return_type: _,
+                        body,
+                    } = &method_stmt.kind
+                    {
+                        let key = format!("{}::{}", struct_name, name);
+                        let func = Value::Function {
+                            params: params.clone(),
+                            body: body.clone(),
+                        };
+                        env.borrow_mut().set(key, func);
+                    }
+                }
+                Ok(None)
+            }
+
+            StmtKind::EnumDef { name, variants } => {
+                for (i, variant) in variants.iter().enumerate() {
+                    let key = format!("{}::{}", name, variant);
+                    env.borrow_mut().set(key, Value::Int(i as i64));
+                }
+                Ok(None)
+            }
+
+            StmtKind::ForIn {
+                var_name,
+                iterable,
+                body,
+            } => {
+                let iter_val = self.visit_expr(iterable)?;
+                match iter_val {
+                    Value::Array(arr) => {
+                        let items = arr.borrow().clone();
+                        for item in items {
+                            env.borrow_mut().set(var_name.clone(), item);
+                            match eval_block(body, env)? {
+                                Some(Signal::Break) => break,
+                                Some(Signal::Continue) => continue,
+                                Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
+                                None => {}
+                            }
+                        }
                         Ok(None)
                     }
-                }
-                _ => Err(RuntimeError::new("조건문: 불 값이 필요합니다", line)),
-            }
-        }
-
-        StmtKind::WhileLoop { cond, body } => {
-            loop {
-                let cond_val = self.visit_expr(cond)?;
-                match cond_val {
-                    Value::Bool(true) => {}
-                    Value::Bool(false) => break,
-                    _ => return Err(RuntimeError::new("동안 조건: 불 값이 필요합니다", line)),
-                }
-                match eval_block(body, env)? {
-                    Some(Signal::Break) => break,
-                    Some(Signal::Continue) => continue,
-                    Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
-                    None => {}
-                }
-            }
-            Ok(None)
-        }
-
-        StmtKind::ForLoop {
-            init,
-            cond,
-            step,
-            body,
-        } => {
-            self.visit_stmt(init)?;
-            loop {
-                let cond_val = self.visit_expr(cond)?;
-                match cond_val {
-                    Value::Bool(true) => {}
-                    Value::Bool(false) => break,
-                    _ => return Err(RuntimeError::new("반복 조건: 불 값이 필요합니다", line)),
-                }
-                match eval_block(body, env)? {
-                    Some(Signal::Break) => break,
-                    Some(Signal::Continue) => {
-                        self.visit_stmt(step)?;
-                        continue;
-                    }
-                    Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
-                    None => {}
-                }
-                self.visit_stmt(step)?;
-            }
-            Ok(None)
-        }
-
-        StmtKind::Break => Ok(Some(Signal::Break)),
-        StmtKind::Continue => Ok(Some(Signal::Continue)),
-
-        StmtKind::ExprStmt(expr) => {
-            self.visit_expr(expr)?;
-            Ok(None)
-        }
-
-        StmtKind::StructDef { name, .. } => {
-            env.borrow_mut()
-                .set(name.clone(), Value::Str(format!("<구조체 {}>", name)));
-            Ok(None)
-        }
-
-        StmtKind::TryCatch {
-            try_block,
-            error_name,
-            catch_block,
-        } => match eval_block(try_block, env) {
-            Ok(sig) => Ok(sig),
-            Err(e) => {
-                env.borrow_mut()
-                    .set(error_name.clone(), Value::Str(e.message.clone()));
-                eval_block(catch_block, env)
-            }
-        },
-
-        StmtKind::Import(path) => {
-            let resolved_path = std::fs::canonicalize(path)
-                .map(|p| p.to_string_lossy().to_string())
-                .unwrap_or_else(|_| path.clone());
-
-            if env.borrow().has_imported_path(&resolved_path) {
-                return Ok(None);
-            }
-
-            env.borrow_mut().mark_imported_path(&resolved_path);
-
-            let import_result = (|| -> Result<(), RuntimeError> {
-                let source = std::fs::read_to_string(&resolved_path)
-                    .map_err(|e| RuntimeError::new(format!("포함 실패 '{}': {}", path, e), line))?;
-                let tokens = crate::lexer::tokenize(&source);
-                let program = crate::parser::parse(tokens).map_err(|e| {
-                    RuntimeError::new(format!("'{}' 파싱 오류: {}", path, e.message), line)
-                })?;
-                eval_block(&program.stmts, env)?;
-                Ok(())
-            })();
-
-            if let Err(err) = import_result {
-                env.borrow_mut().unmark_imported_path(&resolved_path);
-                return Err(err);
-            }
-
-            Ok(None)
-        }
-
-        StmtKind::Match { expr, arms } => {
-            let val = self.visit_expr(expr)?;
-            for arm in arms {
-                if pattern_matches(&arm.pattern, &val, env) {
-                    return eval_block(&arm.body, env);
-                }
-            }
-            Ok(None)
-        }
-
-        StmtKind::ImplBlock {
-            struct_name,
-            methods,
-        } => {
-            for method_stmt in methods {
-                if let StmtKind::FuncDef {
-                    name,
-                    params,
-                    return_type: _,
-                    body,
-                } = &method_stmt.kind
-                {
-                    let key = format!("{}::{}", struct_name, name);
-                    let func = Value::Function {
-                        params: params.clone(),
-                        body: body.clone(),
-                    };
-                    env.borrow_mut().set(key, func);
-                }
-            }
-            Ok(None)
-        }
-
-        StmtKind::EnumDef { name, variants } => {
-            for (i, variant) in variants.iter().enumerate() {
-                let key = format!("{}::{}", name, variant);
-                env.borrow_mut().set(key, Value::Int(i as i64));
-            }
-            Ok(None)
-        }
-
-        StmtKind::ForIn {
-            var_name,
-            iterable,
-            body,
-        } => {
-            let iter_val = self.visit_expr(iterable)?;
-            match iter_val {
-                Value::Array(arr) => {
-                    let items = arr.borrow().clone();
-                    for item in items {
-                        env.borrow_mut().set(var_name.clone(), item);
-                        match eval_block(body, env)? {
-                            Some(Signal::Break) => break,
-                            Some(Signal::Continue) => continue,
-                            Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
-                            None => {}
+                    Value::Str(s) => {
+                        for ch in s.chars() {
+                            env.borrow_mut()
+                                .set(var_name.clone(), Value::Str(ch.to_string()));
+                            match eval_block(body, env)? {
+                                Some(Signal::Break) => break,
+                                Some(Signal::Continue) => continue,
+                                Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
+                                None => {}
+                            }
                         }
+                        Ok(None)
                     }
-                    Ok(None)
+                    _ => Err(RuntimeError::new(
+                        "반복 안에서: 배열 또는 문자열 필요",
+                        line,
+                    )),
                 }
-                Value::Str(s) => {
-                    for ch in s.chars() {
-                        env.borrow_mut()
-                            .set(var_name.clone(), Value::Str(ch.to_string()));
-                        match eval_block(body, env)? {
-                            Some(Signal::Break) => break,
-                            Some(Signal::Continue) => continue,
-                            Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
-                            None => {}
-                        }
-                    }
-                    Ok(None)
-                }
-                _ => Err(RuntimeError::new(
-                    "반복 안에서: 배열 또는 문자열 필요",
-                    line,
-                )),
             }
-        }
         }
     }
 }

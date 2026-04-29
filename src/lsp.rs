@@ -198,10 +198,7 @@ impl LspServer {
     }
 
     fn handle_did_open(&mut self, params: &Value) {
-        if let Some(text) = params
-            .pointer("/textDocument/text")
-            .and_then(Value::as_str)
-        {
+        if let Some(text) = params.pointer("/textDocument/text").and_then(Value::as_str) {
             self.update_source(text.to_string());
         }
     }

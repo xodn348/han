@@ -4,10 +4,35 @@ version = "0.2.0"
 edition = "2024"
 description = "한글(Han) Korean-syntax programming language: interpreter, LLVM-IR codegen, and LSP"
 license = "MIT"
-repository = "https://github.com/vkehfdl1/han"
+repository = "https://github.com/xodn348/han"
+homepage = "https://xodn348.github.io/han/"
+documentation = "https://xodn348.github.io/han/introduction.html"
+readme = "README.md"
 authors = ["Junhyuk Lee <xodn348@tamu.edu>"]
 keywords = ["korean", "language", "compiler", "interpreter", "llvm"]
 categories = ["compilers", "development-tools", "command-line-utilities"]
+include = [
+    "/Cargo.toml",
+    "/Cargo.lock",
+    "/README.md",
+    "/CHANGELOG.md",
+    "/CONTRIBUTING.md",
+    "/ROADMAP.md",
+    "/rust-toolchain.toml",
+    "/src/**",
+    "/benches/**",
+    "/tests/**",
+    "/examples/**",
+    "/spec/**",
+    "/docs/book.toml",
+    "/docs/src/**",
+    "/assets/banner.png",
+    "/assets/demo.gif",
+    "/llms.txt",
+    "/llms-full.txt",
+    "/install.sh",
+    "/skills/han-language/**",
+]
 
 [[bin]]
 name = "hgl"
