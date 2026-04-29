@@ -152,19 +152,19 @@ fn check_call_args(
     }
 
     for (index, (arg, param_type)) in args.iter().zip(param_types.iter()).enumerate() {
-        if let Some(actual_type) = infer_expr_type(arg, env) {
-            if !types_compatible(param_type, &actual_type) {
-                errors.push(TypeError::new(
-                    format!(
-                        "함수 호출 인자 타입 불일치: '{}' 의 {}번째 인자는 {:?} 예상, {:?} 전달",
-                        name,
-                        index + 1,
-                        param_type,
-                        actual_type
-                    ),
-                    line,
-                ));
-            }
+        if let Some(actual_type) = infer_expr_type(arg, env)
+            && !types_compatible(param_type, &actual_type)
+        {
+            errors.push(TypeError::new(
+                format!(
+                    "함수 호출 인자 타입 불일치: '{}' 의 {}번째 인자는 {:?} 예상, {:?} 전달",
+                    name,
+                    index + 1,
+                    param_type,
+                    actual_type
+                ),
+                line,
+            ));
         }
     }
 }
@@ -270,16 +270,16 @@ fn check_stmt(stmt: &Stmt, env: &mut TypeEnv, errors: &mut Vec<TypeError>) {
             check_expr(value, env, errors, line);
 
             if let Some(declared_ty) = ty {
-                if let Some(actual_ty) = infer_expr_type(value, env) {
-                    if !types_compatible(declared_ty, &actual_ty) {
-                        errors.push(TypeError::new(
-                            format!(
-                                "타입 불일치: '{}' 는 {:?} 타입으로 선언되었지만 {:?} 값이 할당됨",
-                                name, declared_ty, actual_ty
-                            ),
-                            line,
-                        ));
-                    }
+                if let Some(actual_ty) = infer_expr_type(value, env)
+                    && !types_compatible(declared_ty, &actual_ty)
+                {
+                    errors.push(TypeError::new(
+                        format!(
+                            "타입 불일치: '{}' 는 {:?} 타입으로 선언되었지만 {:?} 값이 할당됨",
+                            name, declared_ty, actual_ty
+                        ),
+                        line,
+                    ));
                 }
                 env.vars.insert(name.clone(), declared_ty.clone());
             } else if let Some(inferred) = infer_expr_type(value, env) {
@@ -407,15 +407,14 @@ fn check_stmt(stmt: &Stmt, env: &mut TypeEnv, errors: &mut Vec<TypeError>) {
 
 fn check_return_types(body: &[Stmt], expected: &Type, env: &TypeEnv, errors: &mut Vec<TypeError>) {
     for stmt in body {
-        if let StmtKind::Return(Some(expr)) = &stmt.kind {
-            if let Some(actual) = infer_expr_type(expr, env) {
-                if !types_compatible(expected, &actual) {
-                    errors.push(TypeError::new(
-                        format!("반환 타입 불일치: {:?} 예상, {:?} 반환", expected, actual),
-                        stmt.span.line,
-                    ));
-                }
-            }
+        if let StmtKind::Return(Some(expr)) = &stmt.kind
+            && let Some(actual) = infer_expr_type(expr, env)
+            && !types_compatible(expected, &actual)
+        {
+            errors.push(TypeError::new(
+                format!("반환 타입 불일치: {:?} 예상, {:?} 반환", expected, actual),
+                stmt.span.line,
+            ));
         }
     }
 }
