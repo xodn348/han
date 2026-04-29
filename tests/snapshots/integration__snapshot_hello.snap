@@ -1,0 +1,6 @@
+---
+source: tests/integration.rs
+assertion_line: 392
+expression: out
+---
+안녕하세요, 세계!
