@@ -145,7 +145,7 @@ More examples — including word counting, file I/O, JSON, HTTP, regex, and a fu
 - **Pipe operator** — `값 |> 함수1 |> 함수2`
 - **Stdlib in Korean** — 50+ built-ins: math, regex, JSON, HTTP, file I/O, date/time, system
 - **Linear algebra** — `행렬곱`, `전치`, `내적`, `외적`, `텐서곱`, `단위행렬`
-- **Python interop** — `파이썬()` / `파이썬_값()` for NumPy, PyTorch, etc.
+- **Optional Python interop** — `파이썬()` / `파이썬_값()` for NumPy, PyTorch, etc. when built with `--features python`
 - **Module imports** — `포함 "파일.hgl"` (canonical-path deduplicated)
 - **Generics syntax** — `함수 최대값<T>(a: T, b: T) -> T`
 - **40+ example programs** — from hello world to HTTP API calls
@@ -176,6 +176,8 @@ cargo install han-lang
 ```
 
 The crates.io package name is `han-lang` to avoid naming ambiguity. The language remains **Han**, and the command installed on your PATH remains `hgl`.
+
+The default crates.io install is intentionally Python-free so `hgl` runs without requiring a local Python dynamic library. If you want Python interop built in, install with `cargo install han-lang --features python`.
 
 ---
 

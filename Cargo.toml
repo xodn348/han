@@ -1,6 +1,6 @@
 [package]
 name = "han-lang"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2024"
 description = "한글(Han) Korean-syntax programming language: interpreter, LLVM-IR codegen, and LSP"
 license = "MIT"
@@ -45,7 +45,7 @@ path = "src/lib.rs"
 
 [features]
 default = ["native"]
-native = ["reqwest", "python"]
+native = ["reqwest"]
 python = ["pyo3"]
 
 [dependencies]
