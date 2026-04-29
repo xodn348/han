@@ -5,6 +5,7 @@
 <p align="center">
   <a href="https://xodn348.github.io/han/playground/"><img src="https://img.shields.io/badge/▶%20playground-try%20it%20live-brightgreen?style=flat-square" alt="Playground"></a>
   <a href="https://xodn348.github.io/han/introduction.html"><img src="https://img.shields.io/badge/docs-xodn348.github.io%2Fhan-blue?style=flat-square" alt="Docs"></a>
+  <a href="https://crates.io/crates/han-lang"><img src="https://img.shields.io/crates/v/han-lang?style=flat-square" alt="crates.io"></a>
   <a href="https://github.com/xodn348/han"><img src="https://img.shields.io/badge/language-Rust-orange?style=flat-square" alt="Rust"></a>
   <a href="https://github.com/xodn348/han/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="MIT"></a>
 </p>
@@ -194,6 +195,7 @@ hgl lsp                     Start LSP server (hover + completion)
 
 ## Documentation
 
+- **Crate** — [crates.io/crates/han-lang](https://crates.io/crates/han-lang)
 - **Playground** — [xodn348.github.io/han/playground](https://xodn348.github.io/han/playground/)
 - **Docs home** — [xodn348.github.io/han/introduction.html](https://xodn348.github.io/han/introduction.html)
 - **Language Guide** — [docs/src/reference/language-guide.md](./docs/src/reference/language-guide.md)
