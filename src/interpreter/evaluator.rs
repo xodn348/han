@@ -3,7 +3,9 @@ use std::collections::HashMap;
 use std::io::{self, BufRead};
 use std::rc::Rc;
 
-use crate::ast::{BinaryOpKind, Expr, Pattern, Program, Stmt, StmtKind, UnaryOpKind};
+use crate::ast::{
+    BinaryOpKind, Expr, ExprVisitor, Pattern, Program, Stmt, StmtKind, StmtVisitor, UnaryOpKind,
+};
 
 use super::builtins::{eval_builtin_io, eval_builtin_math, eval_builtin_stdlib};
 use super::env::{EnvRef, Environment, RuntimeError};
@@ -16,8 +18,30 @@ pub enum Signal {
     Continue,
 }
 
+pub struct Evaluator<'a> {
+    pub env: &'a EnvRef,
+    pub line: usize,
+}
+
+impl<'a> Evaluator<'a> {
+    pub fn new(env: &'a EnvRef, line: usize) -> Self {
+        Self { env, line }
+    }
+}
+
 pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, RuntimeError> {
-    match expr {
+    Evaluator::new(env, line).visit_expr(expr)
+}
+
+pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeError> {
+    Evaluator::new(env, stmt.span.line).visit_stmt(stmt)
+}
+
+impl<'a> ExprVisitor<Result<Value, RuntimeError>> for Evaluator<'a> {
+    fn visit_expr(&mut self, expr: &Expr) -> Result<Value, RuntimeError> {
+        let env = self.env;
+        let line = self.line;
+        match expr {
         Expr::IntLiteral(n) => Ok(Value::Int(*n)),
         Expr::FloatLiteral(f) => Ok(Value::Float(*f)),
         Expr::StringLiteral(s) => Ok(Value::Str(s.clone())),
@@ -36,7 +60,7 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
                     line,
                 ));
             }
-            let val = eval_expr(value, env, line)?;
+            let val = self.visit_expr(value)?;
             let updated = env.borrow_mut().update(name, val.clone());
             if !updated {
                 env.borrow_mut().set(name.clone(), val.clone());
@@ -45,13 +69,13 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
         }
 
         Expr::BinaryOp { op, left, right } => {
-            let lv = eval_expr(left, env, line)?;
-            let rv = eval_expr(right, env, line)?;
+            let lv = self.visit_expr(left)?;
+            let rv = self.visit_expr(right)?;
             eval_binary_op(op, lv, rv, line)
         }
 
         Expr::UnaryOp { op, expr } => {
-            let val = eval_expr(expr, env, line)?;
+            let val = self.visit_expr(expr)?;
             match op {
                 UnaryOpKind::Neg => match val {
                     Value::Int(n) => Ok(Value::Int(-n)),
@@ -72,7 +96,7 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
             if name == "출력" {
                 let mut parts = Vec::new();
                 for arg in args {
-                    let v = eval_expr(arg, env, line)?;
+                    let v = self.visit_expr(arg)?;
                     parts.push(v.to_string());
                 }
                 output_line(&parts.join(" "));
@@ -101,8 +125,8 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
                 let mut pairs = Vec::new();
                 let mut i = 0;
                 while i + 1 < args.len() {
-                    let key = eval_expr(&args[i], env, line)?;
-                    let val = eval_expr(&args[i + 1], env, line)?;
+                    let key = self.visit_expr(&args[i])?;
+                    let val = self.visit_expr(&args[i + 1])?;
                     pairs.push((key, val));
                     i += 2;
                 }
@@ -134,7 +158,7 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
 
                     let mut arg_vals = Vec::new();
                     for arg in args {
-                        arg_vals.push(eval_expr(arg, env, line)?);
+                        arg_vals.push(self.visit_expr(arg)?);
                     }
 
                     let func_env = Environment::new_enclosed_ref(env.clone());
@@ -166,7 +190,7 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
                     }
                     let mut arg_vals = Vec::new();
                     for arg in args {
-                        arg_vals.push(eval_expr(arg, env, line)?);
+                        arg_vals.push(self.visit_expr(arg)?);
                     }
                     let closure_env = Environment::new_enclosed_ref(captured_env);
                     for ((param_name, _), val) in params.iter().zip(arg_vals) {
@@ -187,14 +211,14 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
         Expr::ArrayLiteral(elems) => {
             let mut vals = Vec::new();
             for e in elems {
-                vals.push(eval_expr(e, env, line)?);
+                vals.push(self.visit_expr(e)?);
             }
             Ok(Value::Array(Rc::new(RefCell::new(vals))))
         }
 
         Expr::Index { object, index } => {
-            let obj = eval_expr(object, env, line)?;
-            let idx = eval_expr(index, env, line)?;
+            let obj = self.visit_expr(object)?;
+            let idx = self.visit_expr(index)?;
             match (obj, idx) {
                 (Value::Array(arr), Value::Int(i)) => {
                     let arr = arr.borrow();
@@ -243,9 +267,9 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
             index,
             value,
         } => {
-            let obj = eval_expr(object, env, line)?;
-            let idx = eval_expr(index, env, line)?;
-            let val = eval_expr(value, env, line)?;
+            let obj = self.visit_expr(object)?;
+            let idx = self.visit_expr(index)?;
+            let val = self.visit_expr(value)?;
             match (obj, idx) {
                 (Value::Array(arr), Value::Int(i)) => {
                     let mut arr = arr.borrow_mut();
@@ -277,12 +301,12 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
             method,
             args,
         } => {
-            let obj = eval_expr(object, env, line)?;
+            let obj = self.visit_expr(object)?;
             eval_method(obj, method, args, env, line)
         }
 
         Expr::FieldAccess { object, field } => {
-            let obj = eval_expr(object, env, line)?;
+            let obj = self.visit_expr(object)?;
             match obj {
                 Value::Struct { fields, .. } => {
                     fields.borrow().get(field.as_str()).cloned().ok_or_else(|| {
@@ -298,8 +322,8 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
             field,
             value,
         } => {
-            let obj = eval_expr(object, env, line)?;
-            let val = eval_expr(value, env, line)?;
+            let obj = self.visit_expr(object)?;
+            let val = self.visit_expr(value)?;
             match obj {
                 Value::Struct { fields, .. } => {
                     fields.borrow_mut().insert(field.clone(), val.clone());
@@ -312,7 +336,7 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
         Expr::StructLiteral { name, fields } => {
             let mut map = HashMap::new();
             for (fname, fexpr) in fields {
-                map.insert(fname.clone(), eval_expr(fexpr, env, line)?);
+                map.insert(fname.clone(), self.visit_expr(fexpr)?);
             }
             Ok(Value::Struct {
                 name: name.clone(),
@@ -327,11 +351,11 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
         }),
 
         Expr::Range { start, end } => {
-            let s = match eval_expr(start, env, line)? {
+            let s = match self.visit_expr(start)? {
                 Value::Int(n) => n,
                 _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
             };
-            let e = match eval_expr(end, env, line)? {
+            let e = match self.visit_expr(end)? {
                 Value::Int(n) => n,
                 _ => return Err(RuntimeError::new("범위: 정수 필요", line)),
             };
@@ -342,13 +366,13 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
         Expr::TupleLiteral(elems) => {
             let mut vals = Vec::new();
             for e in elems {
-                vals.push(eval_expr(e, env, line)?);
+                vals.push(self.visit_expr(e)?);
             }
             Ok(Value::Tuple(vals))
         }
 
         Expr::TupleIndex { object, index } => {
-            let obj = eval_expr(object, env, line)?;
+            let obj = self.visit_expr(object)?;
             match obj {
                 Value::Tuple(vals) => {
                     if *index >= vals.len() {
@@ -367,11 +391,12 @@ pub fn eval_expr(expr: &Expr, env: &EnvRef, line: usize) -> Result<Value, Runtim
         Expr::MapLiteral(entries) => {
             let mut pairs = Vec::new();
             for (k, v) in entries {
-                let key = eval_expr(k, env, line)?;
-                let val = eval_expr(v, env, line)?;
+                let key = self.visit_expr(k)?;
+                let val = self.visit_expr(v)?;
                 pairs.push((key, val));
             }
             Ok(Value::Map(Rc::new(RefCell::new(pairs))))
+        }
         }
     }
 }
@@ -685,16 +710,19 @@ where
     }
 }
 
-pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeError> {
-    let line = stmt.span.line;
-    match &stmt.kind {
+impl<'a> StmtVisitor<Result<Option<Signal>, RuntimeError>> for Evaluator<'a> {
+    fn visit_stmt(&mut self, stmt: &Stmt) -> Result<Option<Signal>, RuntimeError> {
+        self.line = stmt.span.line;
+        let env = self.env;
+        let line = self.line;
+        match &stmt.kind {
         StmtKind::VarDecl {
             name,
             value,
             mutable,
             ..
         } => {
-            let val = eval_expr(value, env, line)?;
+            let val = self.visit_expr(value)?;
             if *mutable {
                 env.borrow_mut().set(name.clone(), val);
             } else {
@@ -716,7 +744,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
 
         StmtKind::Return(expr_opt) => {
             let val = match expr_opt {
-                Some(expr) => eval_expr(expr, env, line)?,
+                Some(expr) => self.visit_expr(expr)?,
                 None => Value::Void,
             };
             Ok(Some(Signal::Return(val)))
@@ -727,7 +755,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
             then_block,
             else_block,
         } => {
-            let cond_val = eval_expr(cond, env, line)?;
+            let cond_val = self.visit_expr(cond)?;
             match cond_val {
                 Value::Bool(true) => eval_block(then_block, env),
                 Value::Bool(false) => {
@@ -743,7 +771,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
 
         StmtKind::WhileLoop { cond, body } => {
             loop {
-                let cond_val = eval_expr(cond, env, line)?;
+                let cond_val = self.visit_expr(cond)?;
                 match cond_val {
                     Value::Bool(true) => {}
                     Value::Bool(false) => break,
@@ -765,9 +793,9 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
             step,
             body,
         } => {
-            eval_stmt(init, env)?;
+            self.visit_stmt(init)?;
             loop {
-                let cond_val = eval_expr(cond, env, line)?;
+                let cond_val = self.visit_expr(cond)?;
                 match cond_val {
                     Value::Bool(true) => {}
                     Value::Bool(false) => break,
@@ -776,13 +804,13 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
                 match eval_block(body, env)? {
                     Some(Signal::Break) => break,
                     Some(Signal::Continue) => {
-                        eval_stmt(step, env)?;
+                        self.visit_stmt(step)?;
                         continue;
                     }
                     Some(sig @ Signal::Return(_)) => return Ok(Some(sig)),
                     None => {}
                 }
-                eval_stmt(step, env)?;
+                self.visit_stmt(step)?;
             }
             Ok(None)
         }
@@ -791,7 +819,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
         StmtKind::Continue => Ok(Some(Signal::Continue)),
 
         StmtKind::ExprStmt(expr) => {
-            eval_expr(expr, env, line)?;
+            self.visit_expr(expr)?;
             Ok(None)
         }
 
@@ -845,7 +873,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
         }
 
         StmtKind::Match { expr, arms } => {
-            let val = eval_expr(expr, env, line)?;
+            let val = self.visit_expr(expr)?;
             for arm in arms {
                 if pattern_matches(&arm.pattern, &val, env) {
                     return eval_block(&arm.body, env);
@@ -890,7 +918,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
             iterable,
             body,
         } => {
-            let iter_val = eval_expr(iterable, env, line)?;
+            let iter_val = self.visit_expr(iterable)?;
             match iter_val {
                 Value::Array(arr) => {
                     let items = arr.borrow().clone();
@@ -923,6 +951,7 @@ pub fn eval_stmt(stmt: &Stmt, env: &EnvRef) -> Result<Option<Signal>, RuntimeErr
                     line,
                 )),
             }
+        }
         }
     }
 }

@@ -227,6 +227,16 @@ pub enum StmtKind {
     },
 }
 
+/// AST 방문자 트레이트 — 식 처리
+pub trait ExprVisitor<T> {
+    fn visit_expr(&mut self, expr: &Expr) -> T;
+}
+
+/// AST 방문자 트레이트 — 문장 처리
+pub trait StmtVisitor<T> {
+    fn visit_stmt(&mut self, stmt: &Stmt) -> T;
+}
+
 /// 프로그램 최상위 노드
 #[derive(Debug, Clone)]
 pub struct Program {
