@@ -127,7 +127,11 @@ mod tests {
         let decl = Stmt::unspanned(StmtKind::VarDecl {
             name: "파이".to_string(),
             ty: None,
-            value: Expr::FloatLiteral(3.14),
+            value: Expr::FloatLiteral({
+                #[allow(clippy::approx_constant)]
+                let v = 3.14_f64;
+                v
+            }),
             mutable: false,
         });
         eval_stmt(&decl, &env).unwrap();

@@ -490,7 +490,9 @@ mod tests {
     #[allow(clippy::approx_constant)]
     fn test_float_literal() {
         let toks = tokens("3.14");
-        assert_eq!(toks, vec![Token::FloatLiteral(3.14)]);
+        #[allow(clippy::approx_constant)]
+        let expected = 3.14_f64;
+        assert_eq!(toks, vec![Token::FloatLiteral(expected)]);
     }
 
     #[test]
