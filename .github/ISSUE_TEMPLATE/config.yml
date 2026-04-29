@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Han Documentation
+    url: https://xodn348.github.io/han/introduction.html
+    about: Read the docs before filing an issue.
+  - name: Playground
+    url: https://xodn348.github.io/han/playground/
+    about: Try Han in the browser.

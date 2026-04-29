@@ -11,6 +11,7 @@
 
 # Language Reference
 
+- [Language Guide](./reference/language-guide.md)
 - [Variables & Constants](./reference/variables.md)
 - [Data Types](./reference/types.md)
 - [Functions](./reference/functions.md)
@@ -40,12 +41,19 @@
 - [Date & Time](./builtins/datetime.md)
 - [System & Process](./builtins/system.md)
 
+# Examples
+
+- [Examples Index](./examples/index.md)
+
 # Compiler & Tooling
 
 - [CLI Usage](./tooling/cli.md)
 - [VS Code Extension](./tooling/vscode.md)
-- [Architecture](./tooling/architecture.md)
-- [Token Analysis (AI/LLM)](./tooling/token-analysis.md)
+
+# Internals
+
+- [Compiler Architecture](./internals/architecture.md)
+- [Lexer & Token Analysis](./internals/lexer.md)
 
 # API Reference (LLM-Optimized)
 
