@@ -121,6 +121,7 @@ mod tests {
     }
 
     #[test]
+    #[allow(clippy::approx_constant)]
     fn test_const_reassign_error() {
         let env = Environment::new_ref();
         let decl = Stmt::unspanned(StmtKind::VarDecl {

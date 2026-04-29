@@ -1,0 +1,6 @@
+---
+source: tests/integration.rs
+assertion_line: 410
+expression: out
+---
+5050

@@ -1,0 +1,6 @@
+---
+source: tests/integration.rs
+assertion_line: 404
+expression: out
+---
+3628800

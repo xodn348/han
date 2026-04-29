@@ -1,0 +1,6 @@
+---
+source: tests/integration.rs
+assertion_line: 398
+expression: out
+---
+55

@@ -4,6 +4,15 @@ use std::process::Command;
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
 
+fn interpret_file(path: &str) -> String {
+    let source = fs::read_to_string(path).unwrap_or_else(|e| panic!("failed to read {}: {}", path, e));
+    han::interpreter::capture_start();
+    let tokens = han::lexer::tokenize(&source);
+    let program = han::parser::parse(tokens).unwrap();
+    han::interpreter::interpret(program).unwrap();
+    han::interpreter::capture_flush().trim_end().to_string()
+}
+
 fn run_interpret(file: &str) -> String {
     let output = Command::new("cargo")
         .args(["run", "--quiet", "--", "interpret", file])
@@ -370,4 +379,39 @@ fn test_compiled_backend_closure_captures_outer_variable() {
     );
 
     assert_eq!(out, "12");
+}
+
+// ── Snapshot tests (insta) ────────────────────────────────────────────────────
+// Gradual migration from hardcoded assert_eq! to insta::assert_snapshot!.
+// Uses the in-process interpreter (capture_start/capture_flush) so each test
+// runs in milliseconds. Snapshots live under tests/snapshots/.
+
+#[test]
+fn snapshot_hello() {
+    let out = interpret_file("examples/안녕.hgl");
+    insta::assert_snapshot!(out);
+}
+
+#[test]
+fn snapshot_fibonacci() {
+    let out = interpret_file("examples/피보나치.hgl");
+    insta::assert_snapshot!(out);
+}
+
+#[test]
+fn snapshot_factorial() {
+    let out = interpret_file("examples/팩토리얼.hgl");
+    insta::assert_snapshot!(out);
+}
+
+#[test]
+fn snapshot_sum_to_100() {
+    let out = interpret_file("examples/합계.hgl");
+    insta::assert_snapshot!(out);
+}
+
+#[test]
+fn snapshot_even_odd() {
+    let out = interpret_file("examples/짝홀.hgl");
+    insta::assert_snapshot!(out);
 }
