@@ -80,14 +80,16 @@ fn output_binary_name(file_path: &str) -> String {
 fn compile_to_binary(source: &str, output_path: &str) -> Result<(), String> {
     let program = run_pipeline(source);
     let ir = codegen::codegen(&program);
+    let ir_path = std::env::temp_dir().join(format!("han_build_{}.ll", process::id()));
 
-    fs::write("/tmp/han_build.ll", &ir).map_err(|e| format!("임시 파일 쓰기 실패: {}", e))?;
+    fs::write(&ir_path, &ir).map_err(|e| format!("임시 파일 쓰기 실패: {}", e))?;
 
     let clang_result = Command::new("clang")
-        .args(["/tmp/han_build.ll", "-o", output_path, "-lm"])
+        .arg(&ir_path)
+        .args(["-o", output_path, "-lm"])
         .status();
 
-    let _ = fs::remove_file("/tmp/han_build.ll");
+    let _ = fs::remove_file(&ir_path);
 
     match clang_result {
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
