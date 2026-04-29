@@ -91,6 +91,7 @@ fn build_and_run(source: &str, stem_prefix: &str) -> String {
 
     String::from_utf8(run_output.stdout)
         .expect("invalid utf8")
+        .replace("\r\n", "\n")
         .trim()
         .to_string()
 }
