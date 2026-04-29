@@ -376,25 +376,20 @@ impl Lexer {
                     Token::Gt
                 }
             }
-            '&' => {
-                if self.peek() == Some('&') {
-                    self.advance();
-                    Token::AmpAmp
-                } else {
-                    return None;
-                }
+            '&' if self.peek() == Some('&') => {
+                self.advance();
+                Token::AmpAmp
             }
-            '|' => {
-                if self.peek() == Some('|') {
-                    self.advance();
-                    Token::PipePipe
-                } else if self.peek() == Some('>') {
-                    self.advance();
-                    Token::PipeGt
-                } else {
-                    return None;
-                }
+            '&' => return None,
+            '|' if self.peek() == Some('|') => {
+                self.advance();
+                Token::PipePipe
             }
+            '|' if self.peek() == Some('>') => {
+                self.advance();
+                Token::PipeGt
+            }
+            '|' => return None,
             ':' => {
                 if self.peek() == Some(':') {
                     self.advance();
