@@ -17,13 +17,23 @@ sudo apt install clang
 
 ## Install Han
 
+For most Rust users, install Han from crates.io:
+
+```bash
+cargo install han-lang
+```
+
+The crates.io package is named `han-lang`. The language name remains **Han**, and the installed command-line tool remains `hgl`.
+
+To install from a local checkout instead:
+
 ```bash
 git clone https://github.com/xodn348/han.git
 cd han
 cargo install --path .
 ```
 
-`hgl` is now available globally.
+After either install path, `hgl` is available globally.
 
 ## Verify Installation
 

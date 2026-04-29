@@ -42,6 +42,12 @@ Han is a statically-typed, compiled programming language where keywords, type na
 
 ## Quick Start
 
+Install the Rust crate from crates.io. The package is named `han-lang`; the language is Han and the installed CLI command is `hgl`.
+
+```bash
+cargo install han-lang
+```
+
 Create `hello.hgl`:
 
 ```
@@ -162,11 +168,13 @@ cd han
 
 This installs `hgl` globally and automatically sets up the VS Code extension (syntax highlighting + LSP) if VS Code is detected.
 
-Alternatively from crates.io:
+Alternatively from crates.io, install the published Rust package:
 
 ```bash
-cargo install han
+cargo install han-lang
 ```
+
+The crates.io package name is `han-lang` to avoid naming ambiguity. The language remains **Han**, and the command installed on your PATH remains `hgl`.
 
 ---
 

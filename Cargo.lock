@@ -557,7 +557,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "han"
+name = "han-lang"
 version = "0.2.0"
 dependencies = [
  "chrono",

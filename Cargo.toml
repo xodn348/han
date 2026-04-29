@@ -1,5 +1,5 @@
 [package]
-name = "han"
+name = "han-lang"
 version = "0.2.0"
 edition = "2024"
 description = "한글(Han) Korean-syntax programming language: interpreter, LLVM-IR codegen, and LSP"
