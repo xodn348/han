@@ -41,6 +41,12 @@ Han is a statically-typed, compiled programming language where keywords, type na
 
 ---
 
+## Real-world showcase
+
+**[Museum as Code](https://github.com/xodn348/museum-as-code)** ([live site](https://xodn348.github.io/museum-as-code/)) — the National Museum of Korea rebuilt with Han. 56 catalog entries and 10 hero pages are real `.hgl` source files; every code block on the site runs unchanged in `hgl interpret`. The flagship demonstration that Korean-as-syntax scales beyond hello-world to a full content site.
+
+---
+
 ## Quick Start
 
 Install the Rust crate from crates.io. The package is named `han-lang`; the language is Han and the installed CLI command is `hgl`.
