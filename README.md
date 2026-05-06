@@ -20,6 +20,12 @@
 
 ---
 
+## Real-world showcase
+
+**[Museum as Code](https://github.com/xodn348/museum-as-code)** ([live site](https://xodn348.github.io/museum-as-code/)) — the National Museum of Korea rebuilt with Han. 56 catalog entries and 10 hero pages are real `.hgl` source files; every code block on the site runs unchanged in `hgl interpret`. The flagship demonstration that Korean-as-syntax scales beyond hello-world to a full content site.
+
+---
+
 ## Mission
 
 Han is not just a programming language. It is an experiment with three goals:
@@ -38,12 +44,6 @@ Korean is spoken by ~80 million people, yet essentially zero programming languag
 ## About
 
 Han is a statically-typed, compiled programming language where keywords, type names, 50+ built-in functions, and standard library methods are written in Korean — with all error messages in Korean too. Arithmetic, comparison, and assignment operators follow C/Rust conventions. It compiles to native binaries through LLVM IR and also ships with a tree-walking interpreter for instant execution. The compiler toolchain is written entirely in Rust.
-
----
-
-## Real-world showcase
-
-**[Museum as Code](https://github.com/xodn348/museum-as-code)** ([live site](https://xodn348.github.io/museum-as-code/)) — the National Museum of Korea rebuilt with Han. 56 catalog entries and 10 hero pages are real `.hgl` source files; every code block on the site runs unchanged in `hgl interpret`. The flagship demonstration that Korean-as-syntax scales beyond hello-world to a full content site.
 
 ---
 
