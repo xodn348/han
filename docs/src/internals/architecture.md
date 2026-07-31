@@ -10,24 +10,26 @@ Han follows the classical compiler pipeline, implemented entirely in Rust with z
 Source (.hgl)
     │
     ▼
-┌─────────┐     ┌─────────┐     ┌─────────┐
-│  Lexer  │ ──▶ │ Parser  │ ──▶ │   AST   │
-│(lexer.rs)│    │(parser.rs)│   │ (ast.rs) │
-└─────────┘     └─────────┘     └────┬────┘
-                                     │
-                        ┌────────────┼────────────┐
-                        ▼                         ▼
-                ┌──────────────┐         ┌──────────────┐
-                │ Interpreter  │         │   CodeGen    │
-                │(interpreter.rs)│       │ (codegen.rs) │
-                └──────┬───────┘         └──────┬───────┘
-                       │                        │
-                       ▼                        ▼
-                  Direct Output           LLVM IR (.ll)
-                                               │
-                                               ▼
-                                         clang → Binary
+┌──────────┐    ┌───────────┐    ┌──────────┐    ┌────────────────┐
+│  Lexer   │ ─▶ │  Parser   │ ─▶ │   AST    │ ─▶ │  Type checker  │
+│(lexer.rs)│    │(parser.rs)│    │ (ast.rs) │    │(typechecker.rs)│
+└──────────┘    └───────────┘    └──────────┘    └────────┬───────┘
+                                                          │
+                                       ┌──────────────────┴──────────────┐
+                                       ▼                                 ▼
+                               ┌───────────────┐               ┌──────────────┐
+                               │  Interpreter  │               │   CodeGen    │
+                               │(interpreter/) │               │  (codegen/)  │
+                               └───────┬───────┘               └──────┬───────┘
+                                       │                              │
+                                       ▼                              ▼
+                                 Direct Output                  LLVM IR (.ll)
+                                                                      │
+                                                                      ▼
+                                                                clang → Binary
 ```
+
+Both back ends run behind the same front end: `hgl interpret` and `hgl build` share one lexer, one parser, and one type checker, and diverge only at the last step. A full worked trace of a single expression through every stage is in the [README](https://github.com/xodn348/han#how-it-works-source-to-binary).
 
 ## Project Structure
 
@@ -38,8 +40,10 @@ han/
 │   ├── lexer.rs         Lexer: Korean source → token stream
 │   ├── parser.rs        Parser: tokens → AST (recursive descent)
 │   ├── ast.rs           AST node type definitions
-│   ├── interpreter.rs   Tree-walking interpreter
-│   ├── codegen.rs       LLVM IR text code generator
+│   ├── typechecker.rs   Static type resolution and checking
+│   ├── interpreter/     Tree-walking interpreter
+│   ├── codegen/         LLVM IR text code generator
+│   ├── builtins/        Korean standard library
 │   └── lsp.rs           LSP server (hover + completion)
 ├── editors/
 │   └── vscode/          VS Code extension (syntax highlighting + LSP)
