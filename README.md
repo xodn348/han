@@ -158,6 +158,83 @@ More examples — including word counting, file I/O, JSON, HTTP, regex, and a fu
 
 ---
 
+## How It Works: Source to Binary
+
+Han is a classical compiler front end written in Rust, feeding two interchangeable back ends. Each stage is a plain function over a plain data structure, so every stage can be read and tested on its own.
+
+Tracing `출력(1 + 2 * 3)` through the whole toolchain:
+
+```
+  Source text            출력(1 + 2 * 3)
+       │
+       │  ① Lexer                                    src/lexer.rs
+       ▼
+  Token stream           [출력] [(] [1] [+] [2] [*] [3] [)]
+       │
+       │  ② Parser  (recursive descent,             src/parser.rs
+       │             precedence climbing)
+       ▼
+  AST                    Call { name: "출력", args: [
+                           BinaryOp { op: Add,
+                             left:  IntLiteral(1),
+                             right: BinaryOp { op: Mul,
+                                      left: IntLiteral(2),
+                                      right: IntLiteral(3) }}]}
+       │
+       │  ③ Type checker                             src/typechecker.rs
+       ▼
+  Validated AST          every node resolved to 정수 / 실수 / 문자열 / 불 / 없음
+       │
+       ├───────────────────────────────┬──────────────────────────────
+       │                               │
+       │  ④a Interpreter               │  ④b Code generator
+       │      src/interpreter/         │      src/codegen/
+       ▼                               ▼
+  Direct evaluation              LLVM IR text (.ll)
+       │                               │
+       │                               │  clang
+       │                               │  (LLVM optimizer + backend)
+       ▼                               ▼
+  stdout                         Native binary  →  stdout
+
+  `hgl interpret`                `hgl build` / `hgl run`
+```
+
+| # | Stage | Turns | Into | Reports |
+|---|-------|-------|------|---------|
+| ① | Lexer | raw characters | a flat token stream, whitespace and comments dropped | unrecognized input |
+| ② | Parser | a flat token stream | a tree, with operator precedence and Korean SOV/SVO word order resolved | syntax errors (aborts) |
+| ③ | Type checker | a tree | the same tree with every type resolved | type mismatches, collected per line |
+| ④ | Code generator | a typed tree | flat LLVM IR text | nothing; earlier stages own correctness |
+
+Stage ② is where the tree first exists, and that is what makes precedence real: a flat token list has no notion of what happens first, a tree does. Stage ③ exists because stage ④ has to know whether to emit an integer or a floating-point instruction.
+
+### Where LLVM fits
+
+Han's own code stops at LLVM IR. It never links against LLVM libraries. `src/codegen/` emits IR as plain text and `clang` takes it from there.
+
+```
+  Han's job                     │  LLVM's job
+  ──────────────────────────────┼──────────────────────────────
+  lexing                        │  optimization passes
+  parsing                       │  instruction selection
+  type checking                 │  register allocation
+  emitting LLVM IR              │  x86-64 / ARM64 / wasm codegen
+```
+
+That split is why `cargo build` needs no LLVM installation, and why reaching a new CPU target costs nothing on Han's side.
+
+Note that LLVM shows up at two independent levels, which is easy to conflate:
+
+1. **Building the compiler.** `cargo build` hands *Han's Rust source* to `rustc`, which uses LLVM as its own back end, producing the `hgl` binary.
+2. **Running the compiler.** `hgl build` hands *the user's `.hgl` source* through the four stages above into LLVM IR, and clang turns that into the user's binary.
+
+Same back end, two different levels, no relationship between them beyond that. LLVM is a code generation library, not a runtime, so nothing "runs on" it.
+
+For module layout and design rationale, see [Compiler Architecture](./docs/src/internals/architecture.md).
+
+---
+
 ## Installation
 
 ### Prerequisites
